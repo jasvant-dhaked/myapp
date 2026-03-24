@@ -10,6 +10,14 @@
 
 export default {
 	async fetch(request, env, ctx) {
-		return new Response('Hello World!');
-	},
-};
+		const url = new URL(request.url);
+
+		if (url.pathname === '/') {
+			return new Response("hello");
+		}
+		if (url.pathname === '/trigger') {
+			return env.ASSETS.fetch(request);
+		}
+
+	}
+}

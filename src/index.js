@@ -13,7 +13,7 @@ export default {
 		const url = new URL(request.url);
 
 		if (url.pathname === '/') {
-			return new Response("hello");
+			return new Response("hello world");
 		}
 		if (url.pathname === '/trigger') {
 			return env.ASSETS.fetch(request);

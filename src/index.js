@@ -3,13 +3,24 @@
  * Internal Security Team — Do Not Distribute
  *
  * Routes:
- *   /                → redirect to /trigger
- *   /trigger         → trigger.html  (static via ASSETS)
- *   /exploit         → exploit.html  (static via ASSETS)
- *   /report          → report.html   (static via ASSETS)
- *   /log             → receives callback data from exploit.html
- *   /log-viewer      → live dashboard of received callbacks (auto-refresh 4s)
- *   /log-clear       → clears in-memory log
+ *   /                    → index.html  (all chains overview)
+ *   /trigger             → Chain A trigger
+ *   /exploit             → Chain A exploit
+ *   /report              → Chain A report
+ *   /chain-b-trigger     → Chain B (DAI SSRF) trigger
+ *   /chain-b-exploit     → Chain B exploit
+ *   /chain-b-report      → Chain B report
+ *   /chain-c-trigger     → Chain C (HierarchicalUri bypass) trigger
+ *   /chain-c-exploit     → Chain C exploit
+ *   /chain-c-report      → Chain C report
+ *   /chain-d-report      → Chain D (CropImageActivity + FileProvider) report
+ *   /chain-e-trigger     → Chain E (HTML injection phishing) trigger
+ *   /chain-e-exploit     → Chain E exploit
+ *   /chain-e-report      → Chain E report
+ *   /chain-f-report      → Chain F (Razorpay OTP broadcast) report
+ *   /log                 → receives callback data from exploit pages
+ *   /log-viewer          → live dashboard of received callbacks (auto-refresh 4s)
+ *   /log-clear           → clears in-memory log
  */
 
 // In-memory store — resets on worker restart/cold start.
@@ -54,7 +65,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS });
     }
 
-    // /log — receives exfiltrated data from exploit.html
+    // /log — receives exfiltrated data from exploit pages
     if (path === '/log') {
       const tag  = url.searchParams.get('tag')  || 'unknown';
       const data = url.searchParams.get('data') || '';
@@ -90,7 +101,7 @@ export default {
               <td>${l.ip}</td>
               <td>${l.device}</td>
             </tr>`).join('')
-        : '<tr><td colspan="5" class="empty">No callbacks yet — fire the deeplink first.</td></tr>';
+        : '<tr><td colspan="5" class="empty">No callbacks yet — fire a chain first.</td></tr>';
 
       return html(`<!DOCTYPE html>
 <html lang="en"><head>
@@ -118,7 +129,7 @@ export default {
 <h2>&#128225; Callback Log Viewer</h2>
 <div class="meta">
   Auto-refreshes every 4s &nbsp;·&nbsp; <span class="count">${logs.length}</span> entries
-  &nbsp;·&nbsp; <a href="/trigger">&#8592; Trigger</a>
+  &nbsp;·&nbsp; <a href="/">&#8592; All Chains</a>
   <a href="/log-clear" class="clear">&#128465; Clear logs</a>
 </div>
 <table>
@@ -136,19 +147,32 @@ export default {
       return Response.redirect(new URL('/log-viewer', url).href, 302);
     }
 
-    // / → redirect to trigger
-    if (path === '/') {
-      return Response.redirect(new URL('/trigger', url).href, 302);
-    }
-
     // Static pages served from public/ via ASSETS binding
     const staticRoutes = {
-      '/trigger':      '/trigger.html',
-      '/trigger.html': '/trigger.html',
-      '/exploit':      '/exploit.html',
-      '/exploit.html': '/exploit.html',
-      '/report':       '/report.html',
-      '/report.html':  '/report.html',
+      '/':                 '/index.html',
+      '/index.html':       '/index.html',
+      '/trigger':          '/trigger.html',
+      '/trigger.html':     '/trigger.html',
+      '/exploit':          '/exploit.html',
+      '/exploit.html':     '/exploit.html',
+      '/report':           '/report.html',
+      '/report.html':      '/report.html',
+      // Chain B
+      '/chain-b-trigger':  '/chain-b-trigger.html',
+      '/chain-b-exploit':  '/chain-b-exploit.html',
+      '/chain-b-report':   '/chain-b-report.html',
+      // Chain C
+      '/chain-c-trigger':  '/chain-c-trigger.html',
+      '/chain-c-exploit':  '/chain-c-exploit.html',
+      '/chain-c-report':   '/chain-c-report.html',
+      // Chain D
+      '/chain-d-report':   '/chain-d-report.html',
+      // Chain E
+      '/chain-e-trigger':  '/chain-e-trigger.html',
+      '/chain-e-exploit':  '/chain-e-exploit.html',
+      '/chain-e-report':   '/chain-e-report.html',
+      // Chain F
+      '/chain-f-report':   '/chain-f-report.html',
     };
 
     if (staticRoutes[path]) {

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FamPay Security PoC — Internal</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding:32px 16px;max-width:640px;margin:0 auto}
+  .header{text-align:center;margin-bottom:32px}
+  .badge{display:inline-block;font-size:10px;background:#1a0010;border:1px solid #ff1744;color:#ff6060;padding:3px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px}
+  .logo{font-size:32px;font-weight:900;color:#00d084;margin-bottom:4px}
+  .subtitle{font-size:12px;color:#555;line-height:1.6}
+  .chain-grid{display:flex;flex-direction:column;gap:12px}
+  .chain-card{background:#13131a;border:1px solid #2a2a3a;border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+  .chain-header{display:flex;align-items:center;gap:10px}
+  .chain-id{font-size:11px;font-weight:700;padding:2px 10px;border-radius:4px;letter-spacing:0.5px}
+  .chain-title{font-size:14px;font-weight:700;color:#fff}
+  .chain-vulns{font-size:10px;color:#555;font-family:monospace}
+  .chain-desc{font-size:12px;color:#888;line-height:1.5}
+  .chain-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{padding:7px 14px;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid;cursor:pointer}
+  .btn-primary{color:#000;border-color:transparent}
+  .btn-ghost{background:transparent;color:#448aff;border-color:#2a2a4a}
+  .btn-report{background:transparent;color:#888;border-color:#2a2a3a}
+  .divider{border:none;border-top:1px solid #1a1a2a;margin:8px 0}
+  .status-bar{background:#13131a;border:1px solid #1a2a1a;border-radius:8px;padding:10px 16px;font-size:11px;color:#00e676;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .status-bar a{color:#448aff;text-decoration:none}
+  .severity{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px}
+  /* Chain colors */
+  .ca{background:#00d084;color:#000}  /* Chain A */
+  .cb{background:#ff6d00;color:#000}  /* Chain B */
+  .cc{background:#aa00ff;color:#fff}  /* Chain C */
+  .cd{background:#ffea00;color:#000}  /* Chain D */
+  .ce{background:#d50000;color:#fff}  /* Chain E */
+  .cf{background:#00b0ff;color:#000}  /* Chain F */
+  .sev-critical{background:#d50000;color:#fff}
+  .sev-high{background:#ff6d00;color:#000}
+  .sev-medium{background:#ffea00;color:#000}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="badge">INTERNAL SECURITY — DO NOT DISTRIBUTE</span>
+  <div class="logo">FamPay</div>
+  <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:4px">Vulnerability Chain PoCs</div>
+  <div class="subtitle">com.fampay.in v4.0.5.7 · Oversecured SAST Report · 6 Exploit Chains</div>
+</div>
+
+<div class="status-bar">
+  <span>&#128225; <a href="/log-viewer">Live Log Viewer</a> — see captured data in real time</span>
+  <a href="/log-clear" style="color:#ff4444;font-size:10px">Clear logs</a>
+</div>
+
+<div class="chain-grid">
+
+  <!-- Chain A -->
+  <div class="chain-card">
+    <div class="chain-header">
+      <span class="chain-id ca">CHAIN A</span>
+      <span class="chain-title">WebView JS Interface Exposure</span>
+      <span class="severity sev-high" style="margin-left:auto">HIGH 8.8</span>
+    </div>
+    <div class="chain-vulns">Vuln #2 (DeepLink delivery) + Vuln #16 (JS Interface injection)</div>
+    <div class="chain-desc">Opens an attacker URL inside FamPay WebView via a deeplink. The page gains access to four unguarded JavaScript interfaces — capturing auth token, user details, GPS, contacts, and Firebase config.</div>
+    <hr class="divider">
+    <div class="chain-actions">
+      <a class="btn btn-primary ca" href="/trigger">&#9889; Trigger</a>
+      <a class="btn btn-ghost" href="/exploit">Exploit Page</a>
+      <a class="btn btn-report" href="/report">Report</a>
+    </div>
+  </div>
+
+  <!-- Chain B -->
+  <div class="chain-card">
+    <div class="chain-header">
+      <span class="chain-id cb">CHAIN B</span>
+      <span class="chain-title">DAI SSRF</span>
+      <span class="severity sev-high" style="margin-left:auto">HIGH 8.1</span>
+    </div>
+    <div class="chain-vulns">Vuln #8 (Internet Service Address Substitution / SSRF) + Vuln #2</div>
+    <div class="chain-desc">Forces FamPay to make HTTP GET/POST requests to any attacker-controlled URL via the <code>/dai/</code> deeplink handler. Can probe internal API servers, cloud metadata endpoints, and exfiltrate request headers.</div>
+    <hr class="divider">
+    <div class="chain-actions">
+      <a class="btn btn-primary cb" href="/chain-b-trigger">&#128293; Trigger</a>
+      <a class="btn btn-ghost" href="/chain-b-exploit">Exploit Page</a>
+      <a class="btn btn-report" href="/chain-b-report">Report</a>
+    </div>
+  </div>
+
+  <!-- Chain C -->
+  <div class="chain-card">
+    <div class="chain-header">
+      <span class="chain-id cc">CHAIN C</span>
+      <span class="chain-title">HierarchicalUri Domain Bypass</span>
+      <span class="severity sev-critical" style="margin-left:auto">HIGH 9.3</span>
+    </div>
+    <div class="chain-vulns">Vuln #12 (HierarchicalUri bypass) + Vuln #2 + Vuln #16</div>
+    <div class="chain-desc">Bypasses the <code>fam.one</code> domain allowlist using a malformed URI (<code>https://attacker.com@fam.one</code>). Android's <code>getHost()</code> returns "fam.one" but the WebView loads the attacker's page — with full JS interface access.</div>
+    <hr class="divider">
+    <div class="chain-actions">
+      <a class="btn btn-primary cc" href="/chain-c-trigger">&#128305; Trigger</a>
+      <a class="btn btn-ghost" href="/chain-c-exploit">Exploit Page</a>
+      <a class="btn btn-report" href="/chain-c-report">Report</a>
+    </div>
+  </div>
+
+  <!-- Chain D -->
+  <div class="chain-card">
+    <div class="chain-header">
+      <span class="chain-id cd">CHAIN D</span>
+      <span class="chain-title">CropImageActivity + FileProvider File Read</span>
+      <span class="severity sev-high" style="margin-left:auto">HIGH 7.5</span>
+    </div>
+    <div class="chain-vulns">Vuln #3 (Exported Activity + Overly Permissive FileProvider)</div>
+    <div class="chain-desc">CropImageActivity is exported with no restrictions. FileProvider exposes the entire app data directory via <code>root-path</code>. Any malicious app can read FamPay's SQLite databases, SharedPreferences (auth tokens), and cached files.</div>
+    <hr class="divider">
+    <div class="chain-actions">
+      <a class="btn btn-report cd" href="/chain-d-report" style="color:#000">&#128203; Full Report + ADB PoC</a>
+    </div>
+  </div>
+
+  <!-- Chain E -->
+  <div class="chain-card">
+    <div class="chain-header">
+      <span class="chain-id ce">CHAIN E</span>
+      <span class="chain-title">HTML Injection — In-App Phishing</span>
+      <span class="severity sev-critical" style="margin-left:auto;background:#d50000;color:#fff">CRIT 9.6</span>
+    </div>
+    <div class="chain-vulns">Vuln #11 (HTML Injection in Razorpay WebView) + Vuln #2</div>
+    <div class="chain-desc">Injects arbitrary HTML into a WebView loaded with <code>loadDataWithBaseURL("https://api.razorpay.com", ...)</code>. Attacker renders a convincing fake payment/UPI PIN screen inside the trusted FamPay app context. Captures credentials.</div>
+    <hr class="divider">
+    <div class="chain-actions">
+      <a class="btn btn-primary ce" href="/chain-e-trigger">&#127919; Trigger</a>
+      <a class="btn btn-ghost" href="/chain-e-exploit">Exploit Page</a>
+      <a class="btn btn-report" href="/chain-e-report">Report</a>
+    </div>
+  </div>
+
+  <!-- Chain F -->
+  <div class="chain-card">
+    <div class="chain-header">
+      <span class="chain-id cf">CHAIN F</span>
+      <span class="chain-title">Razorpay OTP Broadcast Interception</span>
+      <span class="severity sev-high" style="margin-left:auto">HIGH 7.8</span>
+    </div>
+    <div class="chain-vulns">Vuln #4 (Implicit Broadcast — SmsReceiver)</div>
+    <div class="chain-desc">Razorpay's SmsReceiver sends an implicit broadcast (<code>com.razorpay.events.SMS_PROCESSED</code>) with the full OTP SMS text and sender phone number. Any app on the device can register for this broadcast — no permissions needed.</div>
+    <hr class="divider">
+    <div class="chain-actions">
+      <a class="btn btn-report cf" href="/chain-f-report" style="color:#000">&#128203; Full Report + ADB PoC</a>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center;margin-top:28px;font-size:10px;color:#333">
+  Internal Security Team · FamPay · Oversecured Scan v4.0.5.7 · March 2026
+</div>
+
+</body>
+</html>

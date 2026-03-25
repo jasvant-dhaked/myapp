@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Report — Insecure WebView JS Interface | FamPay</title>
+<style>
+  :root {
+    --bg: #f8f9fc;
+    --card: #ffffff;
+    --border: #e8eaf0;
+    --red: #d32f2f;
+    --red-light: #ffebee;
+    --orange: #e65100;
+    --orange-light: #fff3e0;
+    --green: #2e7d32;
+    --green-light: #e8f5e9;
+    --blue: #1565c0;
+    --blue-light: #e3f2fd;
+    --purple: #6a1b9a;
+    --purple-light: #f3e5f5;
+    --text: #212121;
+    --muted: #757575;
+    --code-bg: #1e1e2e;
+    --code-text: #cdd6f4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  .report-header {
+    background: linear-gradient(135deg, #1a237e 0%, #311b92 100%);
+    color: white;
+    padding: 40px;
+  }
+  .report-header .org { font-size: 12px; opacity: 0.7; letter-spacing: 2px; text-transform: uppercase; }
+  .report-header h1 { font-size: 26px; font-weight: 700; margin: 8px 0 4px; }
+  .report-header .subtitle { opacity: 0.8; font-size: 14px; }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .meta-item { background: rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; }
+  .meta-item .label { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+  .meta-item .value { font-size: 13px; font-weight: 600; margin-top: 2px; }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+
+  /* ── Severity badge ── */
+  .severity-bar {
+    background: var(--red-light);
+    border-left: 5px solid var(--red);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .severity-circle {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--red);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .severity-circle .score { font-size: 20px; line-height: 1; }
+  .severity-text h2 { color: var(--red); font-size: 18px; }
+  .severity-text p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .num {
+    background: #1565c0;
+    color: white;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+  .card p  { font-size: 13px; color: #444; line-height: 1.6; }
+
+  /* ── Code blocks ── */
+  .code-block {
+    background: var(--code-bg);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin: 10px 0;
+    overflow-x: auto;
+  }
+  .code-block .file-label {
+    font-size: 10px;
+    color: #7c7c9c;
+    margin-bottom: 6px;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+  }
+  .code-block code {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: var(--code-text);
+    line-height: 1.8;
+    white-space: pre;
+    display: block;
+  }
+  .code-block code .highlight { color: #f38ba8; font-weight: bold; }
+  .code-block code .comment   { color: #6c7086; }
+  .code-block code .string    { color: #a6e3a1; }
+  .code-block code .keyword   { color: #cba6f7; }
+
+  /* ── Attack chain ── */
+  .chain {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .chain-step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .chain-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .chain-dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .chain-line {
+    width: 2px;
+    height: 24px;
+    background: #e0e0e0;
+    flex-shrink: 0;
+  }
+  .chain-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    flex: 1;
+  }
+  .chain-content h5 { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .chain-content p  { font-size: 12px; color: var(--muted); }
+  .chain-content code {
+    background: #f5f5f5;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #c62828;
+    font-family: monospace;
+  }
+
+  /* ── Impact table ── */
+  .impact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .impact-item {
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid;
+  }
+  .impact-critical { background: #ffebee; border-color: #ef9a9a; }
+  .impact-high     { background: #fff3e0; border-color: #ffcc80; }
+  .impact-medium   { background: #e8f5e9; border-color: #a5d6a7; }
+  .impact-item .impact-icon { font-size: 22px; }
+  .impact-item .impact-title { font-size: 12px; font-weight: 700; margin-top: 6px; }
+  .impact-item .impact-desc  { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ── Interface table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    background: #1565c0;
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f9f9fb; }
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .tag-critical { background: #ffebee; color: #c62828; }
+  .tag-high     { background: #fff3e0; color: #e65100; }
+  .tag-medium   { background: #e8f5e9; color: #2e7d32; }
+
+  /* ── Fix ── */
+  .fix-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+    font-size: 13px;
+  }
+  .fix-item:last-child { border: none; }
+  .fix-num {
+    background: var(--green);
+    color: white;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .fix-text { color: #333; line-height: 1.5; }
+  .fix-text code { background: #f5f5f5; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #c62828; }
+
+  /* ── Footer ── */
+  .report-footer {
+    background: #1a237e;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    margin-top: 40px;
+  }
+
+  @media print {
+    .severity-bar, .card, .code-block { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════ HEADER ════════════════════════════════ -->
+<div class="report-header">
+  <div class="org">FamPay Internal Security Team</div>
+  <h1>Insecure WebView JavaScript Interface Exposure</h1>
+  <div class="subtitle">Unauthenticated external pages gain access to native device APIs through an exported deeplink entry point</div>
+  <div class="meta-grid">
+    <div class="meta-item"><div class="label">Application</div><div class="value">FamPay Android</div></div>
+    <div class="meta-item"><div class="label">Package</div><div class="value">com.fampay.in</div></div>
+    <div class="meta-item"><div class="label">Version</div><div class="value">4.0.5.7</div></div>
+    <div class="meta-item"><div class="label">Vulnerability #</div><div class="value">#2 (Intent Redirection)</div></div>
+    <div class="meta-item"><div class="label">CVSS 3.1</div><div class="value">8.8 HIGH</div></div>
+    <div class="meta-item"><div class="label">Status</div><div class="value">⚠ Requires Immediate Fix</div></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── SEVERITY ── -->
+  <div class="severity-bar">
+    <div class="severity-circle">
+      <div class="score">8.8</div>
+      <div>HIGH</div>
+    </div>
+    <div class="severity-text">
+      <h2>High Severity — Immediate Action Required</h2>
+      <p>CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N &nbsp;·&nbsp; An attacker can steal a user's auth token, real-time GPS location, and full contact list with a single link click.</p>
+    </div>
+  </div>
+
+  <!-- ── EXECUTIVE SUMMARY ── -->
+  <div class="section">
+    <div class="section-title"><span class="num">1</span> Executive Summary (Non-Technical)</div>
+    <div class="card">
+      <p>
+        Imagine you tap a link someone sends you on WhatsApp. It looks like a normal link. Your phone opens the FamPay app automatically, which seems normal. But silently, in the background, the app hands over your <strong>account login token</strong>, your <strong>live GPS coordinates</strong>, and your <strong>entire phone contacts list</strong> to the attacker — all without showing any warning or asking for any permission.
+      </p>
+      <br>
+      <p>
+        This is possible because FamPay opens a special internal browser ("WebView") to load web pages, and this browser is given the ability to access private phone data. The problem is: the app does not check <em>whose</em> webpage it is loading before handing over these powers. An attacker can trick the app into loading their own malicious webpage and immediately steal the user's data.
+      </p>
+      <br>
+      <p>
+        <strong>Who is at risk?</strong> Every FamPay user on Android. No special knowledge or action is required from the victim beyond tapping a link.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── IMPACT ── -->
+  <div class="section">
+    <div class="section-title"><span class="num">2</span> Impact</div>
+    <div class="impact-grid">
+      <div class="impact-item impact-critical">
+        <div class="impact-icon">🔑</div>
+        <div class="impact-title">Account Takeover</div>
+        <div class="impact-desc">Auth token stolen → attacker logs in as victim on any device</div>
+      </div>
+      <div class="impact-item impact-critical">
+        <div class="impact-icon">📍</div>
+        <div class="impact-title">Live GPS Location</div>
+        <div class="impact-desc">Real-time device coordinates exposed silently</div>
+      </div>
+      <div class="impact-item impact-critical">
+        <div class="impact-icon">📇</div>
+        <div class="impact-title">Full Contact List</div>
+        <div class="impact-desc">All phone contacts exfiltrated including names and numbers</div>
+      </div>
+      <div class="impact-item impact-critical">
+        <div class="impact-icon">👤</div>
+        <div class="impact-title">User PII</div>
+        <div class="impact-desc">Full profile: name, phone, email, KYC status</div>
+      </div>
+      <div class="impact-item impact-high">
+        <div class="impact-icon">🔗</div>
+        <div class="impact-title">Deeplink Hijack</div>
+        <div class="impact-desc">Attacker can navigate user to payment flows</div>
+      </div>
+      <div class="impact-item impact-high">
+        <div class="impact-icon">⚙️</div>
+        <div class="impact-title">Firebase Config</div>
+        <div class="impact-desc">Internal config keys readable from remote page</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TECHNICAL ROOT CAUSE ── -->
+  <div class="section">
+    <div class="section-title"><span class="num">3</span> Technical Root Cause</div>
+
+    <div class="card">
+      <h4>Root Cause A — DeepLinkActivity routes arbitrary URLs into WebviewActivity</h4>
+      <p>
+        <code>DeepLinkActivity</code> is exported (reachable by any app or link on the device). It accepts the deeplink scheme <code>fp://fampay.in/home_init/</code> with a base64-encoded URL in the <code>init_deeplink</code> parameter. This URL is decoded and stored globally — then passed to <code>WebviewActivity</code> with no domain validation.
+      </p>
+      <div class="code-block">
+        <div class="file-label">DeepLinkActivity.java:678</div>
+        <code><span class="keyword">if</span> (str.contains(<span class="string">"/home_init/"</span>)) {
+    String queryParameter2 = uri.getQueryParameter(<span class="string">"init_deeplink"</span>);
+    <span class="comment">// Decodes base64 URL — no domain/allowlist check!</span>
+    <span class="highlight">FamBase.f14042u = new String(Base64.decode(queryParameter2, 0));</span>
+    startActivity(new Intent(this, HomeActivity.class)); <span class="comment">// URL loaded later in WebviewActivity</span>
+}</code>
+      </div>
+      <div class="code-block">
+        <div class="file-label">DeepLinkActivity.java:2047</div>
+        <code><span class="keyword">if</span> (data.getScheme().equals(<span class="string">"https"</span>) &amp;&amp; data.getQueryParameterNames().contains(<span class="string">"fp_type"</span>)) {
+    Intent intent2 = new Intent(this, WebviewActivity.class);
+    <span class="highlight">intent2.putExtra("extra_url", string); <span class="comment">// attacker's URL loaded directly!</span></span>
+    startActivity(intent2);
+}</code>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Root Cause B — JavaScript interfaces injected into every URL, including attacker pages</h4>
+      <p>
+        <code>WebViewFragment</code> calls <code>addJavascriptInterface()</code> for <strong>all 4 interfaces unconditionally</strong> — it does not check whether the loaded URL is a trusted FamPay domain. The <code>NativeAuthAndroid</code> interface (which exposes the auth token) is added when <code>fp_auth_req=true</code> or <code>fp_type=fpSurvey</code> is in the URL — both of which the attacker controls.
+      </p>
+      <div class="code-block">
+        <div class="file-label">WebViewFragment.java:891 — always injected, no domain check</div>
+        <code><span class="highlight">this.webview.addJavascriptInterface(new WebViewActionsJavascriptInterface(...), "NativeActionsAndroid");</span>
+<span class="highlight">this.webview.addJavascriptInterface(new JSContactsBridge(), "ContactActionsAndroid");</span>
+<span class="highlight">this.webview.addJavascriptInterface(new JSAutoLoadBridge(), "AutoLoadActionsAndroid");</span>
+
+<span class="comment">// Also added when fp_auth_req=true OR fp_type=fpSurvey (attacker controls this via URL):</span>
+<span class="keyword">if</span> (y1()) {  <span class="comment">// y1() = fp_auth_req==true OR fp_type==fpSurvey — ATTACKER CONTROLLED</span>
+    <span class="highlight">this.webview.addJavascriptInterface(new WebViewAuthJavascriptInterface(...), "NativeAuthAndroid");</span>
+}</code>
+      </div>
+      <div class="code-block">
+        <div class="file-label">WebViewFragment.java:1014 — y1() check is URL parameter only, no host validation</div>
+        <code><span class="keyword">public final boolean</span> y1() {
+    <span class="keyword">if</span> (<span class="string">"fpSurvey"</span>.equals(this.fp_type)) <span class="keyword">return true</span>;  <span class="comment">// attacker sets fp_type=fpSurvey</span>
+    <span class="keyword">return</span> Uri.parse(this.url)
+        <span class="highlight">.getBooleanQueryParameter(<span class="string">"fp_auth_req"</span>, false); <span class="comment">// attacker sets ?fp_auth_req=true</span></span>
+}</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EXPOSED INTERFACES ── -->
+  <div class="section">
+    <div class="section-title"><span class="num">4</span> Exposed JavaScript Interfaces &amp; Methods</div>
+    <table>
+      <thead>
+        <tr><th>Interface</th><th>Method</th><th>Data Exposed</th><th>Risk</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>NativeAuthAndroid</code></td><td><code>getAuthToken()</code></td><td>Bearer auth token → full account access</td><td><span class="tag tag-critical">CRITICAL</span></td></tr>
+        <tr><td><code>NativeAuthAndroid</code></td><td><code>getUserDetails()</code></td><td>Full user JSON: name, phone, email, KYC</td><td><span class="tag tag-critical">CRITICAL</span></td></tr>
+        <tr><td><code>NativeActionsAndroid</code></td><td><code>getCurrentLocation()</code></td><td>Live GPS lat/lon coordinates</td><td><span class="tag tag-critical">CRITICAL</span></td></tr>
+        <tr><td><code>ContactActionsAndroid</code></td><td><code>getNativeContacts()</code></td><td>All phone contacts (name + number)</td><td><span class="tag tag-critical">CRITICAL</span></td></tr>
+        <tr><td><code>NativeActionsAndroid</code></td><td><code>handleNativeDeeplink(url)</code></td><td>Execute any internal deeplink</td><td><span class="tag tag-high">HIGH</span></td></tr>
+        <tr><td><code>NativeActionsAndroid</code></td><td><code>getFirebaseConfigValue(key)</code></td><td>Read internal Firebase config keys</td><td><span class="tag tag-high">HIGH</span></td></tr>
+        <tr><td><code>NativeAuthAndroid</code></td><td><code>getUserCohorts()</code></td><td>User segmentation/analytics data</td><td><span class="tag tag-medium">MEDIUM</span></td></tr>
+        <tr><td><code>NativeActionsAndroid</code></td><td><code>showToast(msg)</code></td><td>Show arbitrary native toast messages</td><td><span class="tag tag-medium">MEDIUM</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── ATTACK CHAIN ── -->
+  <div class="section">
+    <div class="section-title"><span class="num">5</span> Full Attack Chain</div>
+    <div class="chain">
+      <div class="chain-step">
+        <div class="chain-left"><div class="chain-dot" style="background:#c62828;">1</div><div class="chain-line"></div></div>
+        <div class="chain-content">
+          <h5>Attacker crafts malicious link</h5>
+          <p>Creates a URL: <code>fp://fampay.in/home_init/?init_deeplink=&lt;base64(attacker_page?fp_type=fpSurvey&amp;fp_auth_req=true)&gt;</code></p>
+        </div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-left"><div class="chain-dot" style="background:#e65100;">2</div><div class="chain-line"></div></div>
+        <div class="chain-content">
+          <h5>Victim taps the link</h5>
+          <p>Sent via SMS, WhatsApp, email, or embedded in a webpage. Android prompts to open with FamPay.</p>
+        </div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-left"><div class="chain-dot" style="background:#f57f17;">3</div><div class="chain-line"></div></div>
+        <div class="chain-content">
+          <h5>DeepLinkActivity decodes URL</h5>
+          <p>Base64 is decoded → attacker URL stored globally → <code>HomeActivity</code> launched.</p>
+        </div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-left"><div class="chain-dot" style="background:#1565c0;">4</div><div class="chain-line"></div></div>
+        <div class="chain-content">
+          <h5>WebviewActivity loads attacker page</h5>
+          <p>Attacker's page (e.g. ngrok URL) opens inside FamPay's internal authenticated browser.</p>
+        </div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-left"><div class="chain-dot" style="background:#4a148c;">5</div><div class="chain-line"></div></div>
+        <div class="chain-content">
+          <h5>JavaScript interfaces injected</h5>
+          <p>Because URL contains <code>fp_type=fpSurvey</code>, all 4 interfaces including <code>NativeAuthAndroid</code> are injected into <code>window</code>.</p>
+        </div>
+      </div>
+      <div class="chain-step">
+        <div class="chain-left"><div class="chain-dot" style="background:#880e4f;">6</div></div>
+        <div class="chain-content">
+          <h5>Attacker JavaScript calls native APIs</h5>
+          <p>
+            <code>NativeAuthAndroid.getAuthToken()</code> → auth token<br>
+            <code>NativeAuthAndroid.getUserDetails()</code> → PII<br>
+            <code>NativeActionsAndroid.getCurrentLocation()</code> → GPS<br>
+            <code>ContactActionsAndroid.getNativeContacts()</code> → contacts
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REMEDIATION ── -->
+  <div class="section">
+    <div class="section-title"><span class="num">6</span> Remediation (For Developers)</div>
+    <div class="card">
+      <div class="fix-item">
+        <div class="fix-num">1</div>
+        <div class="fix-text"><strong>Allowlist trusted domains before injecting interfaces.</strong> Before calling <code>addJavascriptInterface()</code>, check that the URL being loaded has a host that ends in <code>.fampay.in</code> or <code>.famapp.in</code>. Reject all other origins.</div>
+      </div>
+      <div class="fix-item">
+        <div class="fix-num">2</div>
+        <div class="fix-text"><strong>Never trust URL parameters for security decisions.</strong> The <code>y1()</code> method grants <code>NativeAuthAndroid</code> based on <code>fp_auth_req=true</code> in the URL — an attacker-controlled value. This check must be based on the <em>domain</em> of the loaded page, not its parameters.</div>
+      </div>
+      <div class="fix-item">
+        <div class="fix-num">3</div>
+        <div class="fix-text"><strong>Validate the decoded deeplink URL in DeepLinkActivity.</strong> After base64-decoding <code>init_deeplink</code>, verify the host is in an explicit allowlist before storing or routing it. Reject <code>null</code>, non-HTTPS, and non-FamPay domains.</div>
+      </div>
+      <div class="fix-item">
+        <div class="fix-num">4</div>
+        <div class="fix-text"><strong>Remove <code>NativeAuthAndroid</code> from WebView entirely.</strong> Auth tokens should never be accessible from a WebView. Use session cookies with <code>httpOnly</code> + <code>secure</code> flags, or pass tokens via server-side rendering only.</div>
+      </div>
+    </div>
+    <div class="code-block">
+      <div class="file-label">Recommended fix — WebViewFragment.java (pseudo-code)</div>
+      <code><span class="comment">// Before adding interfaces, validate the URL host</span>
+String host = Uri.parse(loadedUrl).getHost();
+boolean isTrusted = host != null &amp;&amp; (host.endsWith(<span class="string">".fampay.in"</span>) || host.endsWith(<span class="string">".famapp.in"</span>));
+
+<span class="keyword">if</span> (isTrusted) {
+    this.webview.addJavascriptInterface(new WebViewActionsJavascriptInterface(...), <span class="string">"NativeActionsAndroid"</span>);
+    this.webview.addJavascriptInterface(new JSContactsBridge(), <span class="string">"ContactActionsAndroid"</span>);
+    <span class="comment">// Only add auth interface for trusted, authenticated origins</span>
+    <span class="keyword">if</span> (y1()) {
+        this.webview.addJavascriptInterface(new WebViewAuthJavascriptInterface(...), <span class="string">"NativeAuthAndroid"</span>);
+    }
+}</code>
+    </div>
+  </div>
+
+</div>
+
+<div class="report-footer">
+  FamPay Internal Security Team &nbsp;·&nbsp; com.fampay.in v4.0.5.7 &nbsp;·&nbsp; Confidential — Internal Use Only
+</div>
+
+</body>
+</html>

